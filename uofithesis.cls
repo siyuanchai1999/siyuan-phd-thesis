@@ -61,18 +61,30 @@
 \def\@degreetext{Submitted in partial fulfillment of the requirements\\for the degree of}
 \def\@degreelevel{}
 
+% Customized title page environment to keep them in page number counts
+\newenvironment{thesis@titlepage}
+{%
+    \if@twocolumn
+    \@restonecoltrue\onecolumn
+    \else
+    \@restonecolfalse\newpage
+    \fi
+    \thispagestyle{empty}%
+}%
+{\if@restonecol\twocolumn \else \newpage \fi}
+
 % Make the title according to Graduate College formatting requirements
 \renewcommand{\maketitle}{%
     \if@copyrightpage
-    \begin{titlepage}
+    \begin{thesis@titlepage}
         \vspace*{\fill}
         \begin{center}
             \textcopyright\ \@degreeyear\ \@author
         \end{center}
         \vspace*{\fill}
-    \end{titlepage}
+    \end{thesis@titlepage}
     \fi
-    \begin{titlepage}
+    \begin{thesis@titlepage}
         \newgeometry{margin=1in,vmargin={1.3in,1in}}
         \linespread{1.2}
         \begin{center}%
@@ -153,7 +165,7 @@
         \end{flushleft}
         \par
         \restoregeometry
-    \end{titlepage}
+    \end{thesis@titlepage}
 }
 
 % Abstract environment
@@ -180,8 +192,8 @@
     \thispagestyle{plain}
     \vspace*{\fill}
     \begin{center}
-    \itshape
-}{%
+        \itshape
+    }{%
     \end{center}
     \vspace*{\fill}
     \clearpage
@@ -203,7 +215,7 @@
 \renewcommand*{\l@section}{\@dottedtocline{1}{1.5em}{5em}}
 \renewcommand*{\l@subsection}{\@dottedtocline{2}{3em}{2.5em}}
 
-% Appendix environment that resets numbering and uses A, B, C... 
+% Appendix environment that resets numbering and uses A, B, C...
 % instead of 1, 2, 3... for sections.
 \newcounter{appendix}
 \newenvironment{appendices}{%
