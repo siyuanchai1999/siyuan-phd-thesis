@@ -67,7 +67,8 @@ Or you can download the code as a ZIP file from the GitHub page.
 
 ## Requirements
 
-This template requires **TeX Live 2025** or **later** and must be compiled with **LuaLaTeX**.
+This template requires an up to date TeX installation, recommended to be
+**TeX Live 2026** or later.
 
 ### Installing TeX Live
 
