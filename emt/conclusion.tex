@@ -1,0 +1,64 @@
+\subsection{Concluding Remarks}
+\label{sec:conclusion}
+
+\noindent
+EMT is an OS framework for developing and evaluating
+    OS memory management for new memory translation architectures.
+Our work shows the importance of understanding
+    hardware translation schemes from the OS perspective.
+Specifically, we show that fast translation schemes like ECPT 
+    can incur new challenges for the OS.
+%    which can be overlooked with hardware-centric design process.
+% EMT aims to enable such experience
+%    for systems with hardware-software co-design.
+We will release and make EMT and the emulator toolchains 
+    as an open platform and encourage new hardware architectures
+    to experiment with modern OSes.
+% Our ultimate goal is an infrastructure 
+%   where new translation architectures
+%    can be fairly compared and comprehensively understood. 
+% The aspiration of EMT is beyond an experiment platform. 
+With the significant diversity of emerging workloads
+    and increasing heterogeneity of interconnected memory devices,
+    it becomes harder to foresee a one-size-fits-all translation scheme.
+%    as shown by recent research on hybrid schemes.
+Hence, OS extensibility for different translation schemes 
+    is critical to enable % user-space,
+    specialized translation.
+% Memory translation has been a basic building block of 
+%   heterogeneous computing devices such as IOMMU~\cite{Amit2010},
+%    NeuMMU~\cite{hyun2020neummu}, and MPU~\cite{picorel2017near};
+%    some are also known to suffer from 
+%    off-TLB translation overhead.
+% EMT currently focuses on memory translation for CPU, but
+We hope that EMT design starts a practical 
+    journey towards extensible OS kernels for translation of heterogeneous devices.
+
+%\newpage
+
+%Based on traditional IOMMU, NPU MMU incorporates pending request merging buffer
+%    to merge identical page translations,
+%    more page table walkers to improve MMU throughput,
+%    and page table walk registers (lightweight cache) to reduce the number of page table walks.
+
+% need to integrate into the middle
+\begin{comment}
+Due to the greater complexity of code and logic, macro expansion techniques are
+difficult to apply in high-level functions. Furthermore, we observe that
+high-level functions are rarely replaced on a large scale in the vast majority
+of memory translation designs. This is because these high-level functions are
+inherently more architecture-independent. So, it may not be worth it to refactor
+every function call like what we do for the low layers. For this reason, we
+employ low-overhead runtime checks as shown in Figure \ref{code:if} to implement
+function override for high-level interface implementations. Specifically, we
+define a set of VFS-like function pointer structures in units of \igrp, allowing
+the user to assign alternative implementations for each function. Then, in the
+Linux function of the same name, we insert a lightweight check at the function
+head that will use the alternative implementation to process the request when
+present. Otherwise, the default Linux implementation will work as-is.
+
+This approach proves to be low overhead due to the presence of hardware branch predictors.
+Since function pointers do not change often, such predictors can eliminate the checking overhead with high efficiency.
+Hence, we accomplish on-demand functions redirection with near-zero overhead,
+protecting performance while satisfying the \interface design.
+\end{comment}

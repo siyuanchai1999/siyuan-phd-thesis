@@ -1,0 +1,370 @@
+\subsection{Analysis of EMT-Linux Code}
+\label{appendix:perf}
+
+\noindent
+We analyze the EMT-Linux code to explain 
+  the evaluation results of EMT-Linux (e.g., its performance overhead).
+We first analyze the source code of EMT-Linux and vanilla Linux.
+We use page fault handler
+  as the example, as page fault handling 
+  contributes to the most kernel activities in our evaluation (Figure~\ref{fig:eval:eval-kern-inst-breakdown}).
+Figure~\ref{code:pfh-ve} shows the code snippets of page fault handlers 
+  in vanilla Linux 
+  and EMT-Linux. 
+The two implemenations issues the same set of external function calls
+	(both contain one each of \texttt{\small pgd\_offset} and \texttt{\small p\{4,u,m\}d\_alloc})
+	and have the same 
+    six 64-bit fields on the stack.
+Note that EMT enforces translation objects to be passed by pointer rather than by value,
+    and thus enables stack allocation and partial updates.
+In essence, EMT is an abstraction to existing page table functions
+		and do not require an extra ceremony to call.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{.5\textwidth}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+struct vm_fault { unsigned long address;
+  pte_t *pte; pmd_t *pmd; pud_t *pud; pgd_t *pgd; ...
+};
+
+static vm_fault_t __handle_mm_fault(...) {
+  struct vm_fault vmf = { ...
+    .address = address & PAGE_MASK,
+  };
+  ...
+  struct mm_struct *mm = vma->vm_mm;
+  ...
+  pgd = pgd_offset(mm, address);
+  p4d = p4d_alloc(mm, pgd, address);
+  vmf.pud = pud_alloc(mm, p4d, address);
+  vmf.pmd = pmd_alloc(mm, vmf.pud, address);
+  ...
+}
+\end{minted}
+\captionsetup{justification=centering}
+\vspace{-20pt}
+\caption{Vanilla Linux}
+\label{code:pfh-vanilla}
+\vspace{-7.5pt}
+\end{subfigure}
+\begin{subfigure}[b]{.5\textwidth}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+struct tobj { unsigned long vaddr;
+  pte_t *pte; pmd_t *pmd; pud_t *pud; pgd_t *pgd; ...
+};
+
+struct vm_fault { ...
+  struct tobj tobj;
+};
+
+int x86_tdb_find_tobj(struct tdb *tdb, ulong vaddr, struct tobj *out_tobj) {
+  ...
+  out_tobj->va = vaddr & PAGE_MASK;
+  out_tobj->pgd = pgd_offset(tdb, vaddr);
+  out_tobj->p4d = p4d_alloc(tdb, out_tobj->pgd, vaddr);
+  out_tobj->pud = pud_alloc(tdb, out_tobj->p4d, vaddr);
+  out_tobj->pmd = pmd_alloc(tdb, out_tobj->pud, vaddr);
+  ...
+}
+
+#define tdb_find_tobj x86_tdb_find_tobj
+
+static vm_fault_t __handle_mm_fault(...) {
+  struct vm_fault vmf = { ... };
+  ...
+  if (tdb_find_tobj(mm->tdb, address, &vmf.tobj)) return 1;
+  ...
+}
+\end{minted}
+\captionsetup{justification=centering}
+\vspace{-20pt}
+\caption{EMT-Linux} %\JZc{@siyuan: can you adopt the implementation I put in interface doc?}}
+\label{code:pfh-emt}
+\end{subfigure}
+
+\vspace{-10pt}
+\caption{\bf Simplified code snippets of page fault handlers in (a) vanilla Linux and (b) EMT-Linux.}
+\label{code:pfh-ve}
+\vspace{-5pt}
+\end{figure}
+
+% Although the EMT interface centralizes all page table entries in the \texttt{struct tobj} abstraction
+%	and may lead to a multi-word data structure
+%	(see Figure~\ref{fig:tobj-x86} for an x86 example),
+%		the EMT interface always requires that the \texttt{struct tobj} be passed by pointer rather than by value,
+%			thus enabling stack allocation and partial updates.
+% By enabling optimizations\footnote{.},
+%	the design of the EMT interface allows compilers to generate assemblies with performance approximating vanilla Linux,
+%		thus avoiding performance loss.
+
+% To concretize our claim, we use the page fault handler,
+%	which generated the most kernel activities in our experiments (Figure \ref{fig:eval:eval-kern-inst-breakdown}),
+%	as an example to compare the pre- and post-refactoring code.
+
+
+\begin{figure}
+\centering
+\begin{subfigure}[b]{0.23\textwidth}
+\centering
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+__handle_mm_fault:
+  push rbp
+@\diffamv{  mov  rax, rsi}@
+  push rbx
+@\diffamv{  and  rax, -4096}@
+  lea  rbx, [0+rsi*8]
+@\diffamv{  mov  rbp, rbx}@
+  sub  rsp, 56
+@\diffamv{  mov  QWORD PTR [rsp+16], rax}@
+  mov  rax, QWORD PTR [rdi]
+@\diffoth{}@
+@\diffamv{  mov  QWORD PTR [rsp+40], 0}@
+  add  rbp, QWORD PTR [rax]
+@\diffamv{  mov  QWORD PTR [rsp], rbp}@
+@\diffoth{}@
+@\diffoth{}@
+@\diffoth{}@
+@\diffoth{}@
+@\diffoth{}@
+  je   .L14
+  lea  rax, [rbp+0+rbx]
+  mov  QWORD PTR [rsp+8], rax
+.L6:
+  add  rax, rbx
+  mov  QWORD PTR [rsp+32], rax
+.L8:
+  lea  rbp, [rax+rbx]
+  mov  QWORD PTR [rsp+24], rbp
+  add  rsp, 56
+  xor  eax, eax
+  pop  rbx
+  pop  rbp
+  ret
+.L14:
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L3
+  mov  QWORD PTR [rsp+8], 0
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L15
+.L5:
+  mov  QWORD PTR [rsp+32], 0
+.L9:
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L8
+  mov  QWORD PTR [rsp+24], rbp
+  add  rsp, 56
+  xor  eax, eax
+  pop  rbx
+  pop  rbp
+  ret
+.L3:
+  mov  QWORD PTR [rsp+8], rbx
+  mov  rax, rbx
+  test rbx, rbx
+  jne  .L6
+  mov  edi, 4096
+  call malloc
+  jmp  .L5
+.L15:
+  mov  QWORD PTR [rsp+32], rbx
+  mov  rax, rbx
+  test rbx, rbx
+  je   .L9
+  jmp  .L8
+\end{minted}
+\vspace{-10pt}
+\caption{vanilla Linux (x86 ASM)}
+\label{fig:eval:x86-asm}
+\end{subfigure}
+\begin{subfigure}[b]{0.23\textwidth}
+\centering
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+__handle_mm_fault:
+  push rbp
+@\diffoth{}@
+  push rbx
+@\diffoth{}@
+  lea  rbx, [0+rsi*8]
+@\diffoth{}@
+  sub  rsp, 56
+@\diffoth{}@
+  mov  rax, QWORD PTR [rdi]
+@\diffdmv{  mov  QWORD PTR [rsp+8], 0}@
+@\diffdel{  mov  rax, QWORD PTR [rax]}@
+  mov  rbp, QWORD PTR [rax]
+@\diffoth{}@
+@\diffdmv{  mov  rax, rsi}@
+@\diffdmv{  and  rax, -4096}@
+@\diffdmv{  add  rbp, rbx}@
+@\diffdmv{  mov  QWORD PTR [rsp], rax}@
+@\diffdmv{  mov  QWORD PTR [rsp+40], rbp}@
+  je   .L16
+  lea  rax, [rbp+0+rbx]
+  mov  QWORD PTR [rsp+32], rax
+.L6:
+  add  rax, rbx
+  mov  QWORD PTR [rsp+24], rax
+.L8:
+  lea  rbp, [rax+rbx]
+  mov  QWORD PTR [rsp+16], rbp
+  add  rsp, 56
+  xor  eax, eax
+  pop  rbx
+  pop  rbp
+  ret
+.L16:
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L3
+  mov  QWORD PTR [rsp+32], 0
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L17
+.L5:
+  mov  QWORD PTR [rsp+24], 0
+.L9:
+  mov  edi, 4096
+  call malloc
+  test rax, rax
+  je   .L8
+  mov  QWORD PTR [rsp+16], rbp
+  add  rsp, 56
+  xor  eax, eax
+  pop  rbx
+  pop  rbp
+  ret
+.L3:
+  mov  QWORD PTR [rsp+32], rbx
+  mov  rax, rbx
+  test rbx, rbx
+  jne  .L6
+  mov  edi, 4096
+  call malloc
+  jmp  .L5
+.L17:
+  mov  QWORD PTR [rsp+24], rbx
+  mov  rax, rbx
+  test rbx, rbx
+  je   .L9
+  jmp  .L8
+\end{minted}
+\vspace{-10pt}
+\caption{EMT-Linux (x86 ASM)}
+\label{fig:eval:emt-asm}
+\end{subfigure}
+\vspace{-10pt}
+\caption{{\bf Compiled code of page fault handler snippets 
+  of vanilla Linux and EMT-Linux.} 
+  Main difference is highlighted in dark color; moved lines are in light color.
+  For demonstration, we used very simplified code snippets, which does not reflect 
+  the complexity of real page fault handlers.}
+\label{fig:eval:asm}
+\end{figure}
+
+Figure~\ref{fig:eval:asm} shows 
+  the x86 assembly generated by compiling the code snippets in Figure~\ref{code:pfh-ve}.
+We use GCC v14.2 with -O2 optimization as Linux requires the compiler optimization level 
+  to be at least -O2 since version 0.99.14o~\cite{linux:require-o2}.
+% Figure~\ref{fig:eval:x86-asm} and \ref{fig:eval:emt-asm} shows the compiled code in x86 \jzx{ASM}{assembly}
+%  of \jz{our page fault handler snippets ()} \jzx{in}{with} vanilla Linux~\cite{linux:code:__handle_mm_fault:x86} and in EMT-Linux~\cite{linux:code:__handle_mm_fault:emt} \jz{APIs}, respectively.
+We can see in Figure~\ref{fig:eval:asm} that
+  EMT-Linux only adds one extra memory read instructions
+  due to the dereferncing of \texttt{\small mm->tdb} which is a pointer to the translation database instance
+  (in vanilla Linux, the kernel uses \texttt{mm->pgd} which simply store the root address of radix-tree page table).
+\schai{We chose to use a pointer for \texttt{\small tdb}instead of inlining the struct, because the translation database is defined by the MMU driver and may have different size, scope, and structure.}
+Other changes are merely instruction or field location reorderings.
+
+% We further examine the compilation results of the above-shown code
+%	and the results show that the example code in the two figures produced nearly identical compilation results when using GCC 14.2 and -O2 optimization (see \cite{linux:code:__handle_mm_fault:x86} and \cite{linux:code:__handle_mm_fault:emt}).
+
+We count the instructions of the page fault handlers
+	in the real EMT-Linux and vanilla Linux artifacts ({\it not} simplified ones as shown in Figure~\ref{code:pfh-ve}).
+The page fault handler core routine (\texttt{\small \_\_handle\_mm\_fault}) in vanilla Linux
+	has 1165 instructions, including 274 memory-load instructions and 64 memory-store instructions.
+The \texttt{\small \_\_handle\_mm\_fault} routine in EMT-Linux has 1172 instructions, including 281 memory-load instructions 
+  and 61 memory-store instructions.
+
+We observe that EMT-Linux and vanilla Linux have similar cache efficiency.
+For example, on the Memcached workload, 
+  vanilla Linux and EMT-Linux have cache hit rates of 51.3\% and 51.7\%,
+  with L1I cache hit rates of 90.8\% and 91.2\%, respectively.
+We think that the small EMT interface, which centralizes frequently called 
+  MMU driver code,
+  is cache friendly.
+%  with a small interface, % \jz{and centralize page-table related data into dedicated data structures such as \texttt{struct tobj}},
+% EMT-Linux indirectly reduces the kernel's cache miss rate
+% by creating hot paths. % compared to vanilla Linux.
+% Fundamentally, OS code, due to its relatively short running time,
+%	has less hot caches~\cite{linux:code:icache}, compared to user programs.
+% Since EMT's basic function API contains only 15 functions that are frequently invoked
+%  and encapsulates translation-related data, 
+%	EMT-Linux is friendly to instructions and data caches.
+% \jz{On the other hand, EMT uses compact data sturctures such as \jz{struct tobj} for page table operations,
+%	improving the locality of accessing such data.
+% This locality also helps reduce the chance of cache misses.}
+% \JZx{This concentration of calls indirectly reduces the miss rate of caches.}
+% We find that EMT-Linux has slightly lower cache miss rates (measured by the Linux Perf tool~\cite{perf}).
+% For memcached workload, we evaluated the kernel's cache miss rate by using the .
+% The reduction in cache miss rate offsets the slight increase in instruction count caused 
+%  by using the EMT interface.
+
+Lastly, EMT employs a macro-based function redirection interface for
+  transparent function rewriting, enabling MMU drivers to define macros or inline functions when necessary.
+With this feature, EMT can reduce the overhead of calling small functions.
+In our implementation,
+	we strictly follow the Linux coding style~\cite{linux:code:icache} and only use function inlining
+	for functions with no more than three lines
+	or functions that can perform compile-time code elimination.
+
+\begin{comment}
+
+\begin{figure}[H]
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+// In MMU driver implementation file
+int x86_tdb_find(...) {
+  // ...
+}
+
+// In MMU driver header file
+#define tobj_equal(tobj1, tobj2) \
+  (((tobj1) == (tobj2)) || \
+    !memcmp((tobj1), (tobj2), sizeof(struct tobj)))
+
+static inline x86_tobj_read_attr(...) {
+  // ...
+}
+#define tobj_read_attr x86_tobj_read_attr
+
+int x86_tdb_find(...);
+#define tdb_find x86_tdb_find
+
+// In EMT default implementation file
+#ifndef tobj_equal
+#error Basic function tobj_equal is not defined
+#endif
+
+#ifndef tobj_read_attr
+#error Basic function tobj_equal is not defined
+#endif
+
+#ifndef tdb_find
+#error Basic function tdb_find is not defined
+#endif
+
+\end{minted}
+\vspace{-12.5pt}
+\caption{{\bf Implementation of EMT page fault handling routine.}}
+\label{fig:emt-redir}
+\vspace{-5pt}
+\end{figure}
+
+\end{comment}

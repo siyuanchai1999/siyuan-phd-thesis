@@ -1,0 +1,71 @@
+\subsection{Experience and Lessons Learned}
+\label{sec:lessons}
+
+\noindent
+Developing EMT-Linux and the MMU drivers together with 
+    the emulated MMU
+    took extensive engineering efforts.
+Specifically, we had to develop interacting moving parts 
+    across the hardware-software boundary.
+
+A key principle
+    is to enable incremental, contiguous engineering practice.
+For example, when implementing ECPT, 
+    our first milestone is to write a basic per-process hashed page table (BHPT)
+    using EMT, without features like collision resolution,
+    elastic resizing, CWT/CWC, etc.
+We implement BHPT logic in both EMT-Linux and the MMU and have a running system 
+    that only supports a tiny microbenchmark.
+Despite being basic, the running system serves as a foundation for gradually
+    adding features and eventually evolving into a full-fledged system.
+For features that need both hardware and software support,
+    we start from the hardware, which typically has simpler logic
+    and mostly reads translation data.
+
+We continuously test and evaluate our system, not only 
+    for correctness (\S\ref{ss:correctness}) but also for performance.
+% For example, % when refactoring Linux to EMT-Linux (\S\ref{sec:impl}),
+Continuous profiling helped us quickly observe performance regression over vanilla Linux;
+    when developing ECPT, profiling helped us identify major inefficiencies compared 
+    to the radix-page-table-based system. 
+We developed the instruction analysis 
+    with flame graphs~\cite{tool:flamegraph} in our emulator toolchain. % (\S\ref{sec:eval:emulator}) 
+    and use them extensively. % during the development of the ECPT MMU driver.
+We also added GDB support for the ECPT-based system
+% \schai{ to accelerate debugging with its functionalities like breakpoint, tracing, and watchpoint. 
+    (QEMU's GDB was hardcoded with radix).
+% ; we changed it reuse
+ %   the existing software mmu logic to acquire the physical address.}
+
+We largely reuse the existing Linux compiler toolchain to keep the effort manageable.
+We leverage x86's model-specific registers (MSR)~\cite{intel:man} as the control registers for ECPT,
+    which is supported by GCC (x86's read/write MSR instruction allows access 
+    to arbitrary MSR with a 32-bit identifier).
+% \schaic{If we need a number of registers we added, it's 54.}
+We use Clang's static analysis tools (e.g., clang-query~\cite{tool:clang:query}) to search for
+    error-prone code patterns during refactoring.
+
+% For architecture design like ECPT, the communication between hardware and kernel can be complicated:
+    % 9 registers for kernel, 9 registers for user page table, and also associated register for CWT and rehashed way.
+
+One mistake we made was to start from Linux's boot-time kernel page table~\cite{linux:head64s, linux:head64c},
+    which is legacy code without debugging tools.
+Developing boot-time kECPT requires implementation in assembly
+    and build mappings 
+    of kernel code/data
+    from a bootstrap address space.
+% However, dealing with them at the beginning can greatly slow down the development
+  %  since the booting stage is full of legacy code 
+% but running short of debugging tools.
+% For example, perparing ECPT's kernel page table 
+%    requires to prepare special 
+% requires
+%     prepare special mappings for kernel text and data;
+%     it has to deal with x86's legacy booting process 
+%         like operating at different address space before entering x86 long mode.
+We spent four months to understand the details of the boot-time kernel page table.
+Retrospectively, we should have started from runtime kECPTs
+    (by switching the system to it after boot~\cite{linux:cpucommon})
+    so we could have a running system quicker to parallelize our efforts.
+
+% Even with the help of \branding, implementing a kernel support for a new translation architecture

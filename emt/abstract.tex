@@ -1,0 +1,40 @@
+\begin{abstract}
+With terabyte-scale memory capacity
+    and memory-intensive workloads,
+memory translation has become a major performance bottleneck.
+Many novel hardware schemes are
+    developed to speed up memory translation, but
+    few are experimented with commodity OSes.
+A main reason is that memory management in major OSes, like Linux,
+    does not have the extensibility
+    to empower emerging hardware schemes.
+%    either is hardwired to specific hardware architectures
+ %   and lack extensibility,
+  %  or is not expressive enough to empower emerging architectures.
+    
+% to support new schemes that cannot fit in tree-based abstractions.
+
+%    ; supporting a new scheme requires extensive
+%    modifications of memory management code,
+%    including ``architecture-independent'' portion, creating 
+%    obstacles to hardware innovations.
+
+We develop EMT, a pragmatic framework atop Linux to empower
+    different hardware schemes of memory translation 
+    such as radix tree and hash table.
+% termed Extensible Memory Translation (EMT).
+EMT provides an architecture-neutral interface that
+    1) supports diverse memory translation architectures,
+    2) enables hardware-specific optimizations,
+    3) accommodates modern hardware and OS complexity,
+%    3) support modern memory management features, % like huge pages and page-table isolation,
+    and 4) has negligible overhead over hardwired implementations. 
+% With EMT, new hardware translation schemes can be effectively
+%    supported.
+We port Linux's memory management onto EMT and show that 
+    EMT enables extensibility without sacrificing performance.
+We use EMT to implement OS support for ECPT and FPT, two recent experimental translation 
+    schemes for fast translation;
+    EMT enables us to understand the OS perspective of these architectures
+    and further optimize their designs.
+\end{abstract}

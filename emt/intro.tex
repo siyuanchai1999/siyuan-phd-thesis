@@ -1,0 +1,277 @@
+\subsection{Introduction}
+\label{sec:intro}
+
+\begin{quote}
+	``It so happens that a tree format is the only sane format...''~\cite{linux:torvalds_pt}
+	---Linus Torvalds, 2002
+\end{quote}
+
+% \vspace{-5pt}
+
+Virtual memory translation has become a major performance bottleneck
+	of emerging memory-intensive computing~\cite{basu2013efficient,gupta2021midgard,
+		skarlatos2020ecpt,park2022fpt,kanellopoulos2023utopia,margaritov2019asap,kwon2016coordinated}.
+With unprecedented growth of memory capacity,
+	driven by terabyte-scale memory~\cite{news:aws:18tb,news:gcloud:12tb} 
+	and
+	memory expanders like CXL~\cite{li2023pond,sharma2023cxl},
+TLBs cannot scale in the same way as memory.
+Moreover, emerging workloads like 
+	machine learning, graph processing, and bioinformatics
+	have irregular memory access patterns with weak locality, making
+	TLBs and other MMU caches less efficient.
+As a result, TLB misses are inevitably increasing, resulting in
+	expensive address translation
+	across the memory system.
+
+However, today's translation architectures were 
+	designed at a time
+	of scarce memory, and optimize 
+	space-efficiency over performance.
+The {\it de facto} schemes organize translations
+	into a multi-level radix tree~\cite{intel:man,amd:man,aarch64:man};
+upon a TLB miss, the MMU must {\it sequentially} walk the tree, resulting in multiple memory accesses.
+The x86-64 architecture uses a four-level
+	tree, with a fifth level added in recent hardware~\cite{intel:5level,intel:5level:implement}. % like Intel Sunny Cove
+In virtualized environments, translation overhead is magnified by nested translation~\cite{bhargava2008accelerating,merrifield2016performance}
+	which takes
+%	where the MMU performs 
+	a two-dimensional 
+	walk over the guest and host page tables, resulting in up to
+% A nested translation takes up to 
+24 sequential memory accesses on four-level page tables. % (35 with five levels).
+%	and up to 35 with five-level page tables.
+
+
+To address this pressing problem,
+	many new hardware architectures for MMUs have been developed to realize fast translation
+	for today's terabyte-scale, heterogeneous memory.
+% ~\cite{skarlatos2020ecpt,gupta2021midgard,
+%	park2022fpt,self:dmt,basu2013efficient,kanellopoulos2023utopia}.
+For example, hashing-based translation schemes are 
+	revisited~\cite{gosakan2023mosaic,jovan2022nestedecpt,skarlatos2020ecpt,jovan2023memory,yaniv2016hash,vmware2021hashing,Kwon24},
+	as hashing is inherently more scalable than walking a tree~\cite{yaniv2016hash};
+a recent hashing scheme, based on Elastic Cuckoo Page Table (ECPT), 
+	is reported to reduce translation overhead significantly 
+	by enabling parallel lookups of page table entries~\cite{skarlatos2020ecpt,jovan2022nestedecpt}.
+%	and supports modern paging features like huge pages and page sharing.
+New translation schemes using flattened or linear page tables~\cite{park2022fpt,karakostas2015redundant} have also been developed.
+In addition, recent studies advocate for hybrid translation architectures
+	that use different schemes collectively or selectively~\cite{alam2017doityourself,ahn2012revisiting,hoang2010nested,ghose2019pim,kanellopoulos2023utopia,self:dmt}.
+%	and use them selectively according to applications~\cite{alam2017doityourself} and configurations~\cite{ahn2012revisiting,hoang2010nested,ghose2019pim}.
+
+% Proposals for hybrid design for virtualization (e.g., tree for guest and hash table for host)
+% or heterogeneous memory (e.g., tree for CXL).
+
+Unfortunately, OS support for hardware innovations falls short;
+	few aforementioned new hardware schemes were
+	experimented with commodity OSes like Linux. % \TODO{and FreeBSD}.
+Instead, evaluations of experimental architectures mostly use
+	performance models to estimate OS overhead~\cite{self:dmt,margaritov2019asap,yaniv2016hash,karakostas2015redundant,alverti2020enhancing,ryoo2017rethinking},
+	or trace-driven simulation with traces 
+	collected by running workloads on unmodified Linux~\cite{skarlatos2020ecpt,ryoo2017rethinking,yaniv2016hash,margaritov2019asap}.
+	% \jztodo{@siyuan: can you confirm on this?}.
+The assumption is that OS overhead 
+	on different translation architectures is constant.
+However, our paper shows that translation architectures
+	could have significant impacts on OS performance.
+
+% Currently, most hardware designs were evaluated with trace-based simulation,
+%	which hardly accounts for \TODO{[need strong and fair arguments.}
+%	also need to account for full-system simulation]}
+% even full-system simulation is down with a trace-driven approach;
+In fact, the difficulties of OS support has affected hardware research---disruptive 
+	hardware designs are often considered ``{\it undesirable}'' and lose to incremental approaches (see~\cite{margaritov2019asap}).
+Our discussions with hardware vendors 
+	tell us that the lack of commodity OS support and evaluation is a major barrier
+	to assessing and adopting new hardware translation schemes.
+
+% it is a time that is hard for clean-slate design that can ignore OS support.
+
+The unsatisfactory OS effort is largely due to memory management systems in 
+	commodity OSes not having the extensibility
+	for emerging translation architectures.
+For example, Linux 
+    assumes a radix-tree based page table structure
+    and lacks extensibility to support hardware schemes that cannot fit in its tree 
+    definition.
+As a result, supporting a new architecture often requires heavy
+    modifications of memory management code
+    in architecture-independent modules.
+% This is a daunting task, given the size and complexity of modern memory management subsystems 
+%	and their tight coupling with memory translation 
+%	(\S\ref{sec:background}).
+Essentially, Linux provides no extensible
+	interface for memory translation,
+	unlike its
+	other subsystems (e.g., VFS for file systems~\cite{linux:vfs}). 
+	% (which enables diverse filesystems for different storage devices and usages).
+% Despite the proposal of reusing VFS for memory management~\cite{tabatabai:hotos23},
+%	VSF cannot provide native support for memory translation (\S\ref{sec:need}).
+% is caused by 
+%	historical views of memory subsystem, as reflected by the quotes from 
+%	Torvalds in 2002.
+% However, emerging memory systems have drastically different characteristics
+%	and we argue that modern OSes must provide extensibility to accommodate
+%	terabyte-scale and heterogeneous memory.
+% BSD kernels~\cite{cranor99uvm} %that adopt Mach's design~\cite{rashid1987machine,rashid1987machine}
+%	have more extensible memory management systems (from Mach's design~\cite{rashid1987machine});
+% but, their address map interface is
+%	not expressive enough for hardware-specific optimizations
+%	in OS memory management (\S\ref{sec:need}).
+
+% Modern mm subsystem is very complex with many features (e.g., THP, PTI)
+%	and their implementations are tightly coupled with address translation.
+% Few of them were considered by architecture research
+%	but can have profound implications of practical adoptions.
+
+% An important roadblock is that there's no generic VM design to implement them in the software stack.
+% The reason is there is no generic VM design to implement and evaluate them.
+
+\para{Contributions.}
+We develop a pragmatic OS framework and toolchains
+	atop Linux to embrace 
+	new hardware translation architectures for today's memory technologies.
+We term our framework 
+%	such as x86-like radix tree and hash table.
+	Extensible Memory Translation (EMT).
+We target Linux %, instead of OSes that are easier to extend (e.g., microkernels), 
+	as it is 
+	still the {\it de facto} commodity OS and 
+	is mostly assumed by architecture research on memory systems.
+
+EMT provides an architecture-neutral Linux interface that 
+	1) supports diverse memory translation architectures,
+    2) enables hardware-specific optimizations,
+	3) accommodates modern hardware and OS complexity,
+	and 4) has negligible overhead over Linux's hardwired implementation.
+% \schaix{With EMT, new translation architectures can be effectively supported
+% 	and experimented on Linux.}
+\schai{
+By abstracting translation-related operations, 
+	EMT simplifies the effort to support and experiment with new translation architectures on Linux.
+% \weiwei{I think "EMT enables easier..." can be removed as it says the same thing as the previous one.}
+% EMT enables easier support for new translation architectures on Linux.
+% EMT avoids developers from refactoring memory management code in Linux "architecture-independen" code.
+With EMT, developers only need to implement an MMU driver
+	as a hardware-specific implementation of translation logic,
+	without modifying the architecture-independent memory management code.
+% supporting a new memory-translation architecture only requires developers to write a MMU driver, 
+% 	a architecture-dependent implementation of memory transltion logic. 
+% EMT avoids changing the architecture-independent memory management code. 
+}
+EMT also makes it easy to profile and analyze OS performance with regard to 
+	hardware translation schemes as it abstracts translation-related
+	% memory management
+	operations. %  related to translation.
+% 	by adding hardware-specific code,
+%	while reusing architecture independent modules.
+% EMT is inspired by the pmap interface in BSD/Mach
+%	for separating machine dependent and independent code~\cite{rashid1987machine,rashid1987machine},
+%	but is different.
+% Different from pmap as a general representation of physical address maps, 
+%	EMT targets on
+%	enabling OS support for new translation architectures:
+%	it exposes low-level primitives to OS memory management %like pointers to translation entries
+%	and enables hardware-specific customizations on architecture-neutral implemenations. % on primitives iterators and locks.
+% Built on Linux,
+%	EMT minimizes 
+%	indirection overhead and avoids introducing new abstractions.
+
+% \TODO{I feel I miss something; the writing is not as exciting as I hope to be.
+% We need to discuss and brainstorm.}
+
+We implement EMT on Linux (v5.15), referred to EMT-Linux. 
+% We port Linux onto EMT,
+%	referred to as EMT-Linux.
+We modularize
+	architecture-independent code with EMT API, removing 
+	hardwired assumptions.
+EMT realizes negligible overhead % \schai{(on average less than 0.5\%)}
+	through careful engineering and optimizations
+	\schai{(with less than 0.5\% overhead 
+	on average across key OS operations)}.
+%	with cache efficiency.
+Moreover, EMT-Linux realizes all existing features and 
+	hardware-specific optimizations
+	in vanilla Linux.
+% We then refactor hardware-specific memory management code using EMT.
+% \TODO{???: by in-place adaptation without runtime overhead.}
+	
+% on both micro and macro benchmarks.
+
+% \jyk{Adding number.}
+% ---an extensible interface can be accomplished without sacrificing system performance.
+% We used Linux Testing Project (LTP) to check the correctness of EMT-Linux.
+
+We build on EMT-Linux to add OS support for ECPT~\cite{skarlatos2020ecpt} and FPT~\cite{park2022fpt}, 
+	two new translation schemes.
+%	hashing-based translation scheme 
+%	different from x86-64's scheme.
+Porting these new hardware schemes on Linux without a framework like EMT would require 
+	major rewriting of Linux's
+	memory management module.
+	% including architecture-independent portion which is hardwired to tree-based translation. 
+With EMT, supporting them on Linux is modularized 
+% by implementing basic functions and customized optimizations 
+	with manageable engineering efforts.
+
+Evaluating new hardware schemes on EMT-Linux faces a common challenge 
+	of hardware-software codesign---the hardware is not yet available
+	to run the OS.
+To address this problem, we assemble a toolchain that 
+	runs EMT-Linux on QEMU with an emulated MMU where we implement
+	the hardware translation logic.
+Our toolchain enables us to understand the OS perspective of new translation
+	architectures,
+	such as its OS overhead over x86. %  as well as other translation . 
+The toolchain also supports cycle-accurate hardware simulation.
+%   using existing simulators.
+%	recording memory traces of EMT-Linux
+%	and replaying them in hardware simulators.
+
+We share our experience of supporting new translation schemes
+	on EMT-Linux, which
+	enables us to understand OS memory management challenges 
+	% of hardware translation architecture,
+	% to effectively manage the new, fast translation architecture
+	beyond hardware perspectives.
+We present our reflection on the ECPT design and address correctness challenges such as managing
+	the kernel page table (kECPT) and the paradox involved in 
+	changing the translations of the kECPT itself and of the kernel code 
+	that manages kECPT, as well as performance challenges like 
+	efficient locking and memory scanning.
+%	but have to be addressed for practical use cases.
+% elegant hardware designs may not transfer to software implementations.
+Arguably, OS framework support is essential to encourage and embrace 
+	disruptive hardware innovations,
+	and EMT is an important step forward.
+%	we find current address translation designs overlook design requirements from the OS perspectives.
+% Also, we find current designs often overlook design aspects, as they are buried deep in the code mountain.
+
+% It's time.	
+% Statements that only tree is the practical solution;
+
+\para{Summary.} This paper makes the following contributions:
+\begin{packed_itemize}%[\labelitemi]
+	\item A discussion on empowering new, experimental hardware-assisted translation architectures
+		on commodity OSes.
+	\item EMT as an extensible framework for developing and evaluating OS memory management 
+		on new translation architectures,
+		and its implementation on Linux.
+	\item An experience of building ECPT and FPT on Linux using EMT and the reflection 
+		on hardware/OS designs.
+	\item An open platform for developing, testing, and evaluating OS kernels 
+		on new memory translation architectures.
+	% \item \schaix{All code and data will be released, including EMT-Linux, ECPT/FPT
+	% implementation, and the emulator toolchains.}
+	\item \schai{Our artifacts: \url{https://github.com/xlab-uiuc/emt}.}
+\end{packed_itemize}
+
+
+
+% While the marvelous hardware designs strive to improve performance of address translation,
+%    few of them consider the challenges of integrating the designs into a modern operating system. 
+% To help future researchers and engineers understand the design space in OS,
+%    we delve into Linux to study its structure and design, 
+%    memory and page table management in particular.

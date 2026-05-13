@@ -1,0 +1,257 @@
+%% These are LaTeX dependencies that are needed to build the paper but are not a part of the conference template
+
+% \usepackage{usenix}
+\usepackage{usenix2021}
+\usepackage{filecontents}
+\usepackage{enumitem}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{pstricks}
+\usepackage{comment}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{tabularx}
+\usepackage{tikz}
+%\usepackage{pifont}
+\usepackage{wrapfig}
+\usepackage[hyphens]{xurl}
+% \usepackage{breakcites}
+
+%\usepackage{cite}
+%\usepackage[numbers,super]{natbib}
+\usepackage{xcolor}
+\usepackage{amsfonts}
+
+% \usepackage{adjustbox}
+\usepackage{tikz}
+\usepackage[available,functional,reproduced]{usenixbadges}
+\usetikzlibrary{arrows,tikzmark}
+
+% Set title/author height
+% \usepackage{titling}
+% \setlength{\droptitle}{-2.5em}
+% \postauthor{\end{tabular}\vspace{-0.5in}\end{center}}
+% \date{}
+
+% Paragraph and caption spacing
+% \setlength{\abovecaptionskip}{5pt}
+% \setlength{\belowcaptionskip}{10pt}
+% \setlength{\floatsep}{3pt}
+% \setlength{\textfloatsep}{3pt}
+% \setlength{\dbltextfloatsep}{3pt}
+% \setlength{\intextsep}{3pt}
+
+% \usepackage{sectsty}
+% \subsectionfont{\fontsize{12}{16}\selectfont}
+% \subsubsectionfont{\fontsize{11}{14}\selectfont}
+% \paragraphfont{\fontsize{10.5}{12.5}\selectfont}
+
+\renewcommand*\ttdefault{txtt}
+
+% Set title/author height
+\usepackage{titling}
+\setlength{\droptitle}{-3.05em}
+\postauthor{\end{tabular}\vspace{-0.5in}\end{center}}
+\date{}
+
+% Use these to save space
+\setlength{\abovecaptionskip}{5pt}
+\setlength{\belowcaptionskip}{10pt}
+\setlength{\floatsep}{2.5pt}
+\setlength{\textfloatsep}{3pt}
+\setlength{\dbltextfloatsep}{3pt}
+\setlength{\intextsep}{3pt}
+
+% Section header spacing
+\usepackage{titlesec}
+\titlespacing\subsection{0pt}{12.5pt}{4.5pt}
+\titlespacing\subsubsection{0pt}{12pt}{3pt}
+\titlespacing\paragraph{0pt}{12pt}{3pt}
+\titleformat{\subsection}
+  {\normalfont\fontsize{12}{15}\bfseries}{\thesection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{11}{15}\bfseries}{\thesubsection}{1em}{}
+
+\usepackage{minted}
+\newcommand{\codehl}[3]{{\setlength{\fboxsep}{1pt}\textbf{\colorbox{hlgray}{#2\tikzmark{#1}#3}}}}
+\newcommand{\codenote}[6]{\draw[-,overlay,thin] (pic cs:#1) +(0,#2) |- +(#3,#4) node[rectangle,draw,#5,thin,fill=bkgray,inner sep=2pt] {\scriptsize\makecell[l]{#6}};}
+\newcommand{\codetype}[1]{\textbf{\color{mintedtype}#1}}
+\newcommand{\codefunc}[1]{\color{mintedfunc}#1}
+\newcommand{\coderet}[1]{\textbf{\color{mintedret}#1}}
+
+% \renewcommand*{\ttdefault}{cmtt}
+
+\newenvironment{packed_itemize}{
+    \begin{list}{\labelitemi}{\leftmargin=1.0em}
+     \setlength{\itemsep}{2.5pt}
+     \setlength{\parskip}{0pt}
+     \setlength{\parsep}{0pt}
+     \setlength{\headsep}{0pt}
+     \setlength{\topskip}{0pt}
+     \setlength{\topmargin}{0pt}
+     \setlength{\topsep}{0pt}
+     \setlength{\partopsep}{0pt}
+    }{\end{list}}
+
+\newcommand*\circled[1]{%
+	\begin{tikzpicture}[baseline=(C.base)]
+		\node[draw,circle,fill=black,inner sep=0.1pt](C) {\textcolor{white}{#1}};
+	\end{tikzpicture}}
+
+\newcommand{\aspy}{\makecell{\checkmark}}
+\newcommand{\aspn}{\makecell{-}}
+
+\definecolor{hlgray}{HTML}{DDDDDD}
+\definecolor{bkgray}{HTML}{EEEEEE}
+\definecolor{mintedtype}{HTML}{B00040}
+\definecolor{mintedhl}{HTML}{C00000}
+\definecolor{mintedfunc}{HTML}{0000FF}
+\definecolor{mintedret}{HTML}{999999}
+
+\definecolor{comment}{HTML}{008000}
+
+\definecolor{popipa}{HTML}{FF3377}
+\definecolor{roselia}{HTML}{3344AA}
+\definecolor{ras}{HTML}{39C9C5}
+\definecolor{monica}{HTML}{33AAFF}
+\definecolor{mygo}{HTML}{3388BB}
+\definecolor{mujica}{HTML}{881144}
+
+\definecolor{diffadd}{HTML}{80E597}
+\definecolor{diffdel}{HTML}{FF9F99}
+\definecolor{diffoth}{HTML}{AAAAAA}
+\definecolor{diffamv}{HTML}{DAFBE1}
+\definecolor{diffdmv}{HTML}{FFEBE9}
+
+\newcommand{\TODO}[1]{{\color{red} #1}}
+\newcommand{\REVIEW}[1]{{\color{blue} #1}}
+
+
+% Editorial
+\iftrue % change to \iffalse to preview changes
+
+	\usepackage[normalem]{ulem}
+
+	\newcommand{\JZ}[1]{{\color{orange} #1}} % new text
+	\newcommand{\JZx}[1]{{\color{purple} \sout{#1}}} % del text
+	\newcommand{\JZc}[1]{{\color{comment} /* \textit{#1} */}} % comment
+	\newcommand{\JZd}[1]{} % exile to the void
+	\newcommand{\JZe}[1]{{\color{mujica} \uwave{#1}}} % highlight
+	\newcommand{\JZhl}{\colorbox{mujica}{\color{white} NOTE:}}
+	\newcommand{\JZtodo}{\colorbox{mygo}{\color{white} TODO:}}
+
+	\newcommand{\jz}[1]{{\JZ{#1}}} % new text
+	\newcommand{\jza}[2]{{\JZ{#1} \JZc{#2}}} % add and comment text
+	\newcommand{\jzc}[2]{{\JZe{#1} \JZc{#2}}} % comment existing text
+	\newcommand{\jzd}[2]{{\JZx{#1} \JZc{#2}}} % delete and comment text
+	\newcommand{\jzx}[2]{{\JZx{#1} \JZ{#2}}} % delete and replace text
+	\newcommand{\jzxc}[3]{{\JZx{#1} \JZ{#2} \JZc{#3}}} % replace text with comment
+	\newcommand{\jztodo}[1]{{\JZc{\JZtodo #1}}}
+	\newcommand{\jzmark}[1]{{\JZc{\JZhl #1}}}
+
+
+	% \newcommand{\schai}[1]{{\color{blue} #1}} % new text
+	\newcommand{\schai}[1]{#1}
+	\newcommand{\schaix}[1]{{\color{red} \sout{#1}}} % del text
+	\newcommand{\schaic}[1]{{\color{comment} /* \bf schai \textit{#1} */}} % comment
+	
+	\newcommand{\alan}[1]{{\color{comment} /* \bf alan \textit{#1} */}} % comment
+
+	\newcommand{\jyk}[1]{{\footnotesize{\color{cyan} {\bf JYK: #1}}}}
+	\newcommand{\jykx}[1]{{\color{cyan} \sout{#1}}}
+
+	\newcommand{\weiwei}[1]{{\color{olive} {\bf WEIWEI: #1}}}
+	\newcommand{\weiweix}[1]{{\color{red} \sout{#1}}}
+
+	% so we can mix \cite within colored text
+	\let\oldcite\cite
+	\renewcommand{\cite}[1]{\mbox{\oldcite{#1}}}
+
+\else
+	\newcommand{\tianyin}[1]{#1}
+
+	\newcommand{\JZ}[1]{#1} % new text
+	\newcommand{\JZx}[1]{} % del text
+	\newcommand{\JZc}[1]{} % comment
+	\newcommand{\JZd}[1]{} % exile to the void
+	\newcommand{\JZe}[1]{} % highlight
+	\newcommand{\JZhl}{}
+	\newcommand{\JZtodo}{}
+
+	\newcommand{\jz}[1]{#1}
+	\newcommand{\jzd}[2]{#2}
+	\newcommand{\jzc}[2]{#1}
+	\newcommand{\jzx}[2]{#2}
+	\newcommand{\jzxc}[3]{#2}
+	\newcommand{\jztodo}{}
+
+	\newcommand{\schai}[1]{#1} % new text
+	\newcommand{\schaix}[1]{} % del text
+	\newcommand{\schaic}[1]{} % comment
+
+	\newcommand{\jyk}[1]{}
+	\newcommand{\jykx}[1]{}
+
+	\newcommand{\weiwei}[1]{}
+	\newcommand{\weiweix}[1]{}
+\fi
+
+% Layout
+\usepackage{pgffor}
+\newcommand{\para}[1]{\vspace{.10in}\noindent{\bf #1}}
+\newcommand{\ident}[1]{\foreach \index in {1, ..., #1} { }}
+\newcommand{\diffline}[2]{\setlength{\fboxsep}{3pt}\colorbox{#1}{\raisebox{0pt}[0.5em][0pt]{\makebox[\textwidth][l]{\!\!#2}}}}
+\newcommand{\diffadd}[1]{\diffline{diffadd}{#1}}
+\newcommand{\diffdel}[1]{\diffline{diffdel}{#1}}
+\newcommand{\diffoth}[1]{\diffline{diffoth}{#1}}
+\newcommand{\diffamv}[1]{\diffline{diffamv}{#1}}
+\newcommand{\diffdmv}[1]{\diffline{diffdmv}{#1}}
+
+% Paper Specific
+\newcommand{\branding}{EMT\xspace} % Stands for Extensible Memory Translation
+\newcommand{\interface}{\branding interface\xspace}
+
+\newcommand{\eradix}{\branding-Radix\xspace}
+\newcommand{\eecpt}{\branding-ECPT\xspace}
+
+\newcommand{\iigrp}{Functional Group\xspace}
+\newcommand{\iigrps}{function groups\xspace}
+\newcommand{\igrp}{\branding functional group\xspace}
+\newcommand{\igrps}{\branding functional groups\xspace}
+
+\newcommand{\ptsfg}{{\it PTS-fg}\xspace}
+\newcommand{\ptefg}{{\it PTE-fg}\xspace}
+\newcommand{\hwofg}{{\it HWO-fg}\xspace}
+
+\newcommand{\iilyr}{Abstraction Layer\xspace}
+\newcommand{\ilyr}{\branding abstraction layer\xspace}
+\newcommand{\ilyrs}{\branding abstraction layers\xspace}
+
+\newcommand{\mmudriver}{MMU driver\xspace}
+\newcommand{\mmudrivers}{MMU drivers\xspace}
+\newcommand{\essgrps}{Primitives\xspace}
+\newcommand{\optgrps}{Optimizations\xspace}
+
+\newcommand{\pte}{PSE\xspace}
+\newcommand{\ptes}{PSEs\xspace}
+\newcommand{\ptefull}{paging structure entry\xspace}
+\newcommand{\ptesfull}{paging structure entries\xspace}
+
+\usepackage{array}
+\newcolumntype{F}[1]{>{\arraybackslash}p{#1}}
+\newcommand{\itblhead}[1]{\hline \multicolumn{10}{|c|}{\textbf{#1}} \\ \hline \hline}
+\newcommand{\itblnext}[1]{\hline \hline \multicolumn{10}{|c|}{\textbf{#1}} \\ \hline \hline}
+\newcommand{\itblitem}[2]{\multicolumn{10}{|l|}{\texttt{\makecell[l]{#1}}} \\ & \multicolumn{9}{F{0.91\linewidth}|}{#2} \\ \hline}
+\newcommand{\itblnote}[1]{\multicolumn{10}{|l|}{#1} \\ \hline}
+
+% Compact list
+\usepackage{paralist}
+
+% Subfigure
+\usepackage{subcaption}

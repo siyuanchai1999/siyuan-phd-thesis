@@ -1,0 +1,101 @@
+\subsection{Related Work}
+\label{sec:related}
+
+\noindent
+As memory translation has become a major bottleneck of emerging memory-hungry, irregular 
+    workloads such as generative models, graph analytics,
+    and recommendation systems,
+    translation architecture has been an immensely active 
+    research topic recently.
+Extensive efforts are made on new designs of
+    TLB~\cite{pham2012colt,pham2014increasing,park2017hybrid,barr2011spectlb} 
+    and page walk caches~\cite{barr2010translation,bhattacharjee2013lmm},
+    and more efficient huge page management~\cite{panwar2018making,navarro2002practical,kwon2016coordinated,panwar2019hawkeye,jia:pact:23}.
+
+To fundamentally resolve translation bottlenecks, 
+    recent work~\cite{skarlatos2020ecpt,kanellopoulos2023utopia,gupta2021midgard,yaniv2016hash,gosakan2023mosaic} 
+    is actively rethinking translation architectures;
+    a common thread is to prioritize speed over space efficiency (with abundant memory)
+    and use fast lookup structures to reduce tail latency (avoiding pointer chasing).
+
+% To reduce the memory translation overhead of emerging data-intensive applications,
+% many new memory translation architectures have been proposed, including
+% tree-based memory translation designs~\cite{park2022fpt,ainsworth2021compendia,
+% ahn2012revisiting,margaritov2019asap,gandhi2016agile,alverti2020enhancing,self:dmt},
+% hashing-based memory translation designs~\cite{jovan2022nestedecpt,skarlatos2020ecpt,
+% gosakan2023mosaic},
+% and many others~\cite{gupta2021midgard,kanellopoulos2023utopia,
+% picorel2017near}.
+%
+Memory translation architectures have profound implications on OS reliability and performance,
+    but unfortunately have not been well explored in prior work.
+EMT is designed to enable development and evaluation of OS support for emerging translation architectures
+    to formulate an OS perspective.
+
+Note that memory management and its extensibility were well
+    studied in OS research~\cite{krueger1993tools,rashid1987machine,abrossimov1989generic,engler1995avm,bershad1995extensibility}
+    and are continuously revisited, driven by the growth 
+    of memory capacity and the heterogeneity introduced by memory tiering~\cite{Tabatabai2024,Raybuck2021,Jalalian2024,li2023pond,maruf2023tpp,Bergman2022}.
+So far, extensibility refers to the ability for user space 
+    to customize memory management features, e.g., page fault handler.
+Few prior studies considered extensibility in terms of empowering 
+    memory translation architectures
+    or studied their implications on OS performance.
+
+%
+% Most works mainly center on the design
+% and implementation of the extensible memory management without focusing on extensible memory translation.
+%
+
+We are inspired by machine-independent memory management designs in 
+    Mach~\cite{rashid1987machine} and SunOS~\cite{gingell1987sunos}.
+%    and developed the EMT's interface on those ideas for Linux.
+The goal of EMT
+    is to enable the OS development for emerging, experimental
+    memory translation architectures and 
+    demonstrate the value with our experience.
+We attempted to simplify the EMT interface, e.g., to a map interface~\cite{rashid1987machine,gingell1987sunos};
+	however, we find it hard to balance architecture neutrality 
+	and low-level optimizations.
+% Unlike a map interface, the exposure of low-level detail in EMT allows such task to be implemented
+%	in arch-neutral code with near-Linux performance.
+% It also enables researchers to develop prototypes using existing Linux infrastructures,
+%	without worrying about adding polyfills for uninterested architectures,
+%	hence providing better support in the sense of functionalities.
+One way is to add hints, but 
+	% (e.g.,
+ 	% the last page found) and passes it down to the MMU drivers. \alan{This makes no sense to me}
+	 hints are not expressive for passing information to different MMU drivers.
+
+% \schai{Virtuoso is a very recent hardware simulation framework that 
+% 	considers OS overhead... using a novel idea called mimic OS...
+% 	what's different? 
+% EMT is complementary as [[the goal is...]]
+% EMT can do [[what it cannot do]]}
+
+\schai{
+% Virtual memory subsystem resarch involves innovation in both the OS software and hardware architecture.
+% The existing simulators are either running short in accuracy of modeling software compoments
+%     or too slow and complicated to evaluate the software-hardware co-design
+%     ~\.
+% Prototype and evaulation frameworks for new memory translation architectures
+% Given extensive efforts on innovating translation architectures, TLBs, and
+%     huge page memory management,
+    %  introduces a simulatin framework
+    % to enable quick and accurate prototyping and evaluation of virtual memory subystem.
+Virtuoso~\cite{Kanellopoulos2025virtuoso} is a recent hardware simulation framework that 
+	considers OS overhead (mostly the overhead of page fault handling) 
+    using an imitated MimicOS in the user space.
+% It balances the accuracy of modeling software components and the speed of simulation.
+% It enables quick and accurate prototyping and evaluation of virtual memory subystem.
+EMT and Virtuoso are fundamentally different but are complementary.
+Unlike Virtuoso which is designed for architecture-centric simulations,
+% which aims to avoid implementing the complexity of
+%    full kernel implementation without compromising the simulation accuracy.
+EMT is an OS interface for enabling OS developement and evaluation
+    with regard to new translation architectures.
+% In comparison, EMT is a OS-centric framework which aims to reduce the complexity of implementing OS support
+%    by clearly defining the abstraction for translation logic and connecting the OS with hardware.
+EMT benefits architecture designs from an OS perspective
+    by running real MMU drivers on Linux.}
+%    and model the OS performance impact more accurately (\S\ref{sec:eval}).}
