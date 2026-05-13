@@ -1,0 +1,31 @@
+\section{Virtually Free: Making Strict IO Memory Protection Feasible for Virtualized Environments}
+\label{chp:viommu}
+
+\graphicspath{{vFree/}}
+
+% Paper-specific commands
+\newcommand{\vfreename}{vFree}
+\newcommand{\vfreebrand}{vFree }
+\newcommand{\optOne}{one-for-many invalidation}
+\newcommand{\optOneHeading}{One-for-many Invalidation}
+\newcommand{\CodeIn}[1]{{\small\texttt{#1}}}
+\providecommand{\Description}[1]{}
+\newcommand*\BC[1]{\begin{tikzpicture}[baseline=(C.base)]%
+    \node[draw,circle,fill=black,inner sep=0.1pt](C){\textcolor{white}{#1}};%
+    \end{tikzpicture}}
+
+\input{vFree/macro}
+
+\tagpdfsetup{para/tagging=false}
+
+\input{vFree/sections/intro-rachit}
+\input{vFree/sections/02_Background}
+\input{vFree/sections/Inefficiencies}
+\input{vFree/sections/design-saksham}
+\input{vFree/sections/05_Implementation}
+\input{vFree/sections/06_Evaluation_ishv1k}
+\input{vFree/sections/related}
+\input{vFree/sections/07_Conclusion}
+\input{vFree/appendix}
+
+\tagpdfsetup{para/tagging=true}

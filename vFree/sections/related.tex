@@ -1,0 +1,110 @@
+\subsection{Related Work}
+\label{vfree:sec:related}
+% We discuss key works related to {\vfreename}.
+% \vfreebrand is the first work that studies IO memory protection in virtualized environments with nested transaction, on modern server hardware architectures.
+
+\para{Bare-metal IO memory protection.}
+There is a large and active body of work on enabling IO memory protection with near-zero overheads for the bare metal case~\cite{ben2007price, Malka2015rIOMMU, malka2015efficient, peleg2015utilizing, Markuze2016true, markuze2018damn, RajapakshaIOMMU, Rubin2024FastSafe}. There is also work on rearchitecting IOMMU (\textit{e.g.}, replacing page tables with circular tables~\cite{Malka2015rIOMMU}
+    and using hardware support for security checks~\cite{RajapakshaIOMMU}). Collectively, these works have led to mechanisms that enable achieving strict IO memory protection with minimal overheads. 
+
+{\vfreename} builds upon these works for the bare metal case. For example, persistent
+mapping for receive buffers has been adopted by Linux (Rx datapath optimizations in \S\ref{vfree:sec:background-datapath}); similarly, as discussed in \S\ref{vfree:sec:impl}, we use the techniques developed in~\cite{Rubin2024FastSafe}. As shown in Figure~\ref{vfree:fig:ablation}, these mechanisms are helpful but not sufficient in virtualized environments---the key focus of our work. Indeed, we show in \S\ref{vfree:sec:inefficiencies} that the performance bottlenecks are quite different in virtualized environments and in fact may require design choices that make very different tradeoffs (\textit{e.g.}, {\vfreename} reduces the number of VM exits by increasing the address translation cost).
+    
+% % Prior work studies the overhead of IOMMU protection in bare-mental environments.
+% Markuze et al.\ proposed shadow DMA buffers that restrict devices to
+% permanently mapped memory regions, eliminating IOTLB invalidations and
+% achieving up to 5$\times$ higher throughput than strict mode~\cite{Markuze2016true}.  
+% DAMN specializes this approach for networking by allocating packet buffers from a
+% permanently mapped pool~\cite{markuze2018damn}. Persistent
+% mapping for receive buffers has been adopted by Linux (Rx datapath optimizations in \S\ref{vfree:sec:background-datapath}).
+% % subsystem, so the copy-based approach cannot support zero-copy workloads.
+% % and DAMN is inapplicable to non-networking devices such as NVMe.  
+% In fact, the CPU and memory bandwidth cost of copying scales with IO throughput, 
+%     limiting the approach at higher link speeds.
+% F\&S exploits IO PWCs to reduce the cost of IOTLB misses, 
+%     achieving strict safety with near-zero overhead on bare metal~\cite{Rubin2024FastSafe}. 
+% F\&S's IOVA allocation strategy and page pools apply to virtualized environments, 
+%     but are insufficient:
+%     under nested translation, the dominant overhead shifts from the cost of IOTLB misses 
+%     to VM exits. \vfreebrand builds on the bare-metal foundations and reduces VM exits due to 
+%     cache invalidations, the dominant bottleneck as link speeds increase.
+
+% \vfreebrand requires no IOMMU hardware modification and is 
+%     complementary to research that proposes to rearchitect
+%     IOMMU (e.g., replacing page tables with circular tables~\cite{Malka2015rIOMMU}
+%     and hardware support for security checks~\cite{RajapakshaIOMMU}).
+% Faster IOMMU hardware would further amplify gains of \vfreebrand.
+% Several proposals rearchitect IOMMU hardware to reduce translation or
+% invalidation costs.  Malka et al.\ (rIOMMU) replace the page-table hierarchy
+% with a flat circular table for ring-buffer devices~\cite{Malka2015rIOMMU}.  
+% Rajapaksha et al.\ proposed a hardware indicator-bit to close the exploitable stale-entry window created by deferred invalidation~\cite{RajapakshaIOMMU}.  
+% These approaches are complementary to \vfreebrand: reducing the hardware 
+% cost of each invalidation could further amplify the gains from \vfreebrand's software-side batching and serialization elimination.
+
+\para{vIOMMU emulation.}
+Amit et al.\ presented an vIOMMU emulation for
+    unmodified guests~\cite{Amit2011vIOMMU}. Prior work also optimized other virtualization overhead including 
+    memory pinning~\cite{Tian2020coIOMMU} and interrupts~\cite{Gordon2012eli, Har2013paraIO}. All the above work was conducted at 10--100\,Gbps. \vfreebrand extends these works in two ways. First, it presents new insights related to performance bottleneck at 400\,Gbps (\S\ref{vfree:sec:inefficiencies}); and second, {\vfreename} addresses these bottlenecks with software techniques that require no paravirtualization or hardware modifications.
+
+%     with 
+%     two optimizations: sidecore offloading and optimistic teardown. 
+% Sidecore offloading requires hypervisor modifications and a dedicated core; 
+% \vfreebrand uses a push-based design where vCPUs enqueue invalidations into per-CPU buffers without waiting
+% or dedicating a core. Optimistic teardown recovers line rate at 10\,GbE,
+%     but weakens security guarantees; \vfreebrand preserves strict safety.
+
+\if 0 % this conference is way too weird
+LA-vIOMMU added a fixed IOTLB for long-lived mappings and a guest-side DMA mapping cache 
+    to reduce VM-exit frequency~\cite{Lv2022LAvIOMMU}.
+LA-vIOMMU's guest-side cache optimization targets the map/unmap exit cost; 
+    under nested translation, mapping overhead is already low. 
+LA-vIOMMU also requires hardware modifications to the IOTLB.
+\fi 
+
+
+% coIOMMU introduced cooperative DMA buffer tracking between
+%guest and hypervisor for fine-grained memory pinning~\cite{Tian2020coIOMMU}. 
+% coIOMMU targets the memory pinning problem --- determining which guest pages to pin in host memory---which 
+% is orthogonal to the IOTLB invalidation serialization that \vfreebrand addresses.  
+
+% Parallel efforts have targeted other virtualization overheads.  Gordon et al.\
+% (ELI) and Har'El et al.\ reduced interrupt and exit costs for assigned
+% devices, recovering near-native throughput~\cite{Gordon2012eli, Har2013paraIO}.  
+% These optimizations are complementary to \vfreebrand, which focuses on the IOMMU emulation path rather than the interrupt delivery path.
+
+
+
+
+\para{virtIO IOMMU.} \vfreebrand targets hardware-assisted vIOMMU, not virtio-IOMMU;
+    despite that, the {\vfreename} ideas may apply.
+vIOMMU offers VMs with native hardware interfaces, 
+    ensuring compatibility with nested translation and modern drivers.
+It is supported by mainstream systems such as QEMU~\cite{qemu_10_0}.
+On our platform (\S\ref{vfree:sec:inefficiencies}),
+    virtio-IOMMU can only hit 51\% of the vanilla 
+    vIOMMU throughput with nested translation.
+%    , and just 9\% compared to vIOMMU Off and \vfreename{}.}
+
+% \tianyin{@Siyuan: do we have one result that virtio-IOMMU is slower?}
+
+
+
+% Besides hardware-assisted vIOMMU, IOMMU can be virtualized through virtio-IOMMU, a paravirtualization method 
+%    that requires a synchronized software stack involving both a guest-side frontend driver and a host-side backend.
+% Each DMA operation requires a hypercall, mutex acquisition, and software tree traversal.
+% \schaic{I replaced VM exit with hypercall to reinforce their VM exit nature. @Owen Is it one hypercall on both map and unmap time? If so, we should explicitly state it. Also, let's explain from functionality wise what is the hypercall doing.}
+% Although this implementation is simple, it is considerably less efficient compared to Intel VT-d,
+% which does not require a VM exit when new mappings are built.
+% \schaic{@Owen, let's include a percentage number based on our profiling. aka vanilla virtio vs. vanilla nested strict.}
+
+% The virtio-vIOMMU also introduces a non-architectural software abstraction that precludes the use of unmodified guest vendor drivers.
+% These high-performance proprietary stacks and userspace drivers (e.g., DPDK) often bypass standard kernel DMA APIs to interact directly with architectural register sets.
+% Because virtio-IOMMU exposes a generic software device rather than the expected hardware interfaces, 
+%    these drivers may fail to detect a compatible IOMMU, breaking support for advanced features like p2p DMA and PASID.
+% \schaic{@Owen, can you help search for reference to support our argmument.s}
+    
+% Building upon the vIOMMU framework, our work provides virtual machines with the exact same architectural interface used by a bare-metal kernel. 
+% It ensures compatibility with emerging hardware-assisted nested translation and modern drivers.
+% Our approach targets the production-standard interface used in modern data centers:
+%    \vfreebrand eliminates vIOMMU overhead while maintaining strict safety protection.  
+    % allowing for optimizations in DMA mapping and IOTLB invalidation that remain entirely transparent to the guest while utilizing hardware-assisted nested translation.

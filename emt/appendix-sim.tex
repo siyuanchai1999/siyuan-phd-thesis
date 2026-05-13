@@ -1,14 +1,14 @@
 \subsection{Details of Hardware Simulation}
-\label{sec:details_hwsim}
+\label{emt:sec:details_hwsim}
 
 \schaic{Shall we consider removing this section if we elaborated ECPT and FPT results in Sec 8?}
 \noindent
-Figure~\ref{fig:hwsim} provides detailed results 
+Figure~\ref{emt:fig:hwsim} provides detailed results 
     of the hardware simulation 
-    in \S\ref{sec:eval:hwsim}.
+    in \S\ref{emt:sec:eval:hwsim}.
 We collect the instruction traces and memory traces by running the macro benchmarks
     and application workloads on EMT-Linux using our emulator,
-    and use the traces for hardware simulation, as shown in Figure~\ref{fig:eval:emulator}.
+    and use the traces for hardware simulation, as shown in Figure~\ref{emt:fig:eval:emulator}.
 We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
     to model the CPU described in the ECPT paper (Table 2 in~\cite{skarlatos2020ecpt}).
 %    our emulator toolchain supports different backends such as Gem5 and SST.
@@ -27,7 +27,7 @@ We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
 % 	% \vspace{-0.1cm}
 % 	\vspace{-20pt}
 % 	\caption{Page table walk latency}
-% 	\label{fig:eval:eval:pw-4KB}
+% 	\label{emt:fig:eval:eval:pw-4KB}
 % 	\end{subfigure}%
 % 	\begin{subfigure}[b]{0.235\textwidth}
 % 	\centering
@@ -35,7 +35,7 @@ We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
 % 	\includegraphics[width=\textwidth]{data/ecpt_ipc_unified_never_single.pdf}
 % 	\vspace{-20pt}
 % 	\caption{IPC}
-% 	\label{fig:eval:eval:ipc-4KB}
+% 	\label{emt:fig:eval:eval:ipc-4KB}
 % 	\end{subfigure}
 	
 % \begin{subfigure}[b]{0.235\textwidth}
@@ -44,7 +44,7 @@ We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
 % 	\includegraphics[width=\textwidth]{data/ecpt_e2e_unified_never_single.pdf}
 % 	\vspace{-20pt}
 % 	\caption{Total cycles}
-% 	\label{fig:eval:eval:e2e-4KB}	
+% 	\label{emt:fig:eval:eval:e2e-4KB}	
 % \end{subfigure}
 % \begin{subfigure}[b]{0.235\textwidth}
 % 	\centering
@@ -52,14 +52,14 @@ We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
 % 	\includegraphics[width=\textwidth]{data/ecpt_e2e_running_never.pdf}
 % 	\vspace{-20pt}
 % 	\caption{Total cycles (running phase)}
-% 	\label{fig:eval:eval:e2ert-4KB}
+% 	\label{emt:fig:eval:eval:e2ert-4KB}
 % \end{subfigure}
 % \vspace{-20pt}
 % \caption{{\bf Simulation results in terms of Page Table Walk Latency, 
 %     Instruction Per Cycle (IPC) and Total Cycles with the ECPT system 
 %     and the x86-64 system, running EMT-Linux.} All results are normalized
 %     to those of the x86-64 system as the baselines.}
-% \label{fig:hwsim}
+% \label{emt:fig:hwsim}
 % % \vspace{-5pt}
 % \end{figure}
 
@@ -75,7 +75,7 @@ We use DynamoRIO~\cite{plat:dynamorio} as the hardware simulator
 \subsubsection{Traditional Hardware Metrics}
 
 \noindent
-Figure~\ref{fig:eval:eval:pw-4KB} and \ref{fig:eval:eval:ipc-4KB}
+Figure~\ref{emt:fig:eval:eval:pw-4KB} and \ref{emt:fig:eval:eval:ipc-4KB}
 	shows the speedup of ECPT over x86-64 Radix in terms of 
     Page Table Walk Latency and Instructions Per Cycles (IPC).
 These two metrics are considered key performance metrics of hardware translation schemes~\cite{skarlatos2020ecpt,park2022fpt}
@@ -110,11 +110,11 @@ Although IPC is often used as a metric of application performance,
     it only measures instruction throughput but does not reflect application runtime.
 For the ECPT system, despite that
 	ECPT increases IPC, 
-    our ECPT MMU driver introduces more kernel instructions than the x86-64 MMU driver (\S\ref{ss:eval:eval-ecpt-os}).
-Therefore, we include kernel overhead (mostly page fault handling as shown in Figure~\ref{fig:eval:eval-kern-inst-breakdown}) 
+    our ECPT MMU driver introduces more kernel instructions than the x86-64 MMU driver (\S\ref{emt:ss:eval:eval-ecpt-os}).
+Therefore, we include kernel overhead (mostly page fault handling as shown in Figure~\ref{emt:fig:eval:eval-kern-inst-breakdown}) 
 	and measure the total cycles for running 
 	macro benchmarks and applications.
-The result is shown in Figure~\ref{fig:eval:eval:e2e-4KB}.
+The result is shown in Figure~\ref{emt:fig:eval:eval:e2e-4KB}.
 Overall, the ECPT system reduces total cycles by 2.3\% on average.
 GUPS and Memcached show major improvements, where the ECPT system reduces the total cycles 
 	by 11.5\% and 12.9\%, because these two workloads involve low kernel work.
@@ -129,7 +129,7 @@ The running phase often has much lower kernel activities compared with the
     loading phase.
 If we only consider the running phase, then the ECPT system 
     reduces total cycles by 6.6\% on average compared to the 
-    x86-64 system, as shown in Figure~\ref{fig:eval:eval:e2ert-4KB}.
+    x86-64 system, as shown in Figure~\ref{emt:fig:eval:eval:e2ert-4KB}.
 
 Through the aforementioned analysis, we show that the OS can play 
     an important role in application performance,
@@ -138,7 +138,7 @@ Through the aforementioned analysis, we show that the OS can play
 Prior work assumed that OS overhead is constant under different memory-translation architectures. 
 In the initial modeling, the memory trace is collected from running benchmarks on vanilla Linux on x86-64; 
 	the trace is then replayed in a simulator of ECPT MMU. 
-As shown in \S\ref{ss:perf-ecpt}, memory translation architectures can have profound implications for OS performance. 
+As shown in \S\ref{emt:ss:perf-ecpt}, memory translation architectures can have profound implications for OS performance. 
 For example, in ECPT and other hashing-based translation schemes, range operations are inherently more expensive.} 
 EMT aims to enable OS experience for new translation architectures.
 \schai{We believe that EMT effectively lowers the barrier to implement OS support for new memory-translation architectures
@@ -164,7 +164,7 @@ by making the kernel developers focus on MMU driver implementation.
 % The original ECPT paper also focuses on the stable stage of benchmarks which 
 %	contains less than 1\% of kernel instructions.
 %We also measure the cycles required during the application stable stage,
-%	the results are in Figure~\ref{fig:eval:eval:e2ert-4KB}.
+%	the results are in Figure~\ref{emt:fig:eval:eval:e2ert-4KB}.
 % On average, EMT reduces the cycle count by 6.6\% for the stable stage.
 
 
@@ -218,22 +218,22 @@ bool thp_eligible(tobj, pg_size, vma) {
 \captionsetup{justification=centering}
 \vspace{-10pt}
 \caption{ECPT MMU driver}
-\label{code:thpgen:ecpt}
+\label{emt:code:thpgen:ecpt}
 \end{subfigure}
 \vspace{-20pt}
 \caption{\bf Different implementaions of the EMT customized function,
     \texttt{\small  thp\_eligible()}.}
-\label{code:thpgen}
+\label{emt:code:thpgen}
 \end{figure}
 
 \subsection{More Hardware-Specific Optimizations}
-\label{sec:app:another}
+\label{emt:sec:app:another}
 
 \noindent
 We discussed optimizations that are implemented using the 
     iterator customizable functions,
-    both in the x86-64 MMU driver (Figure~\ref{code:iternext})
-    and in the ECPT MMU driver (\S\ref{ss:ecpt-mmu-driver}).
+    both in the x86-64 MMU driver (Figure~\ref{emt:code:iternext})
+    and in the ECPT MMU driver (\S\ref{emt:ss:ecpt-mmu-driver}).
 In this section, we present another optimization through the customizable function,
     \texttt{\small thp\_eligible} in the huge page group.
 The function checks if a huge page can be created in a Virtual Memory Area (VMA).
@@ -241,7 +241,7 @@ It is on the critical path of page fault handling for determining huge page faul
     and is important.
 % Its performance is important.
 
-Figure~\ref{code:thpgen} shows the implementaions of \texttt{\small thp\_eligible}
+Figure~\ref{emt:code:thpgen} shows the implementaions of \texttt{\small thp\_eligible}
     in the x86-64 MMU driver and the ECPT MMU driver, respectively.
 The two MMU drivers customize the default implemenation differently,
     due to different performance characteristics of the translation architectures.
@@ -253,20 +253,20 @@ It is important to place the cheaper check first.
 For x86-64 radix-tree page table, the first check is a cheaper check, 
     as it involves a single PMD entry lookup.
 In contrast, ECPT has more expensive range operations like \texttt{\small addr\_range\_void()}
-    (see the discussion in \S\ref{sec:ecpt:os:perf});
+    (see the discussion in \S\ref{emt:sec:ecpt:os:perf});
     therefore, the order of the checks is opposite to that in 
     the x86-64 MMU driver.
 
 %      baseline  iterator only  hugepage only  iterator + hugepage
 % 4KB       1.0       0.451086       0.318733             0.316050
 % THP       1.0       0.483435       0.932852             0.46674
-Figure~\ref{fig:eval:appendix} shows the effectiveness of this performance 
+Figure~\ref{emt:fig:eval:appendix} shows the effectiveness of this performance 
     optimization in the ECPT system,
     together with the iterator optimization 
-    (which is discussed in Figure~\ref{fig:eval:eval-ecpt-flame-thp}).
-% ~\ref{fig:eval:eval:opt-group-effect-4k} and~\ref{fig:eval:eval:opt-group-effect-thp}
+    (which is discussed in Figure~\ref{emt:fig:eval:eval-ecpt-flame-thp}).
+% ~\ref{emt:fig:eval:eval:opt-group-effect-4k} and~\ref{emt:fig:eval:eval:opt-group-effect-thp}
 %	compare the effect of the iterator
-%	optimization with the huge page optimization (\texttt{thp\_eligible}) in Figure~\ref{fig:api-cus}.
+%	optimization with the huge page optimization (\texttt{thp\_eligible}) in Figure~\ref{emt:fig:api-cus}.
 We measure the number of instructions executed in the page fault handler
 	when running GraphBIG BFS.
 The \texttt{\small thp\_eligible} optimization is particularly effective in the 4KB setup,
@@ -294,7 +294,7 @@ Hence, the \texttt{\small thp\_eligible} optimization does not save
 	% \vspace{-0.1cm}
 	\vspace{-18pt}
 	\caption{4KB}
-	\label{fig:eval:eval:opt-group-effect-4k}
+	\label{emt:fig:eval:eval:opt-group-effect-4k}
 \end{subfigure}%
 	% Subfigure 2
 	% \vspace{-2cm}
@@ -307,13 +307,13 @@ Hence, the \texttt{\small thp\_eligible} optimization does not save
 	% \vspace{-0.1cm}
 	\vspace{-18pt}
 	\caption{THP}
-	\label{fig:eval:eval:opt-group-effect-thp}
+	\label{emt:fig:eval:eval:opt-group-effect-thp}
 \end{subfigure}
 	\vspace{-20pt}
 	\caption{\bf Effectiveness of the iterator optimization and the \texttt{\small thp\_eligible}
         optimization on page fault handling 
 		running GraphBIG BFS on the ECPT system.}
-    \label{fig:eval:appendix}
+    \label{emt:fig:eval:appendix}
 	% \schaic{If we really need space, we can make EMT-radix as a line.}
 \end{figure}
 
@@ -324,7 +324,7 @@ We further use flame graphs~\cite{tool:flamegraph} to visualize
 	fine-grained profiling data. A flame graph shows the stack frames of a
 	program. We capture and report only the interesting functions. The
 	length of the bars represents the number of instructions executed by each function.
-Figures~\ref{fig:eval:eval-radix-never-vs-ecpt-never-flame-a} and~\ref{fig:eval:eval-radix-never-vs-ecpt-never-flame-b} 
+Figures~\ref{emt:fig:eval:eval-radix-never-vs-ecpt-never-flame-a} and~\ref{emt:fig:eval:eval-radix-never-vs-ecpt-never-flame-b} 
 	show the kernel instructions running GraphBIG
 	BFS on EMT-Linux with the Radix
 	and ECPT MMU drivers, respectively.
@@ -352,7 +352,7 @@ Specifically, for page fault handling,
 
 
 
-% \schaic{The plot ~\ref{figure:eval:eval-kern-inst-breakdown} above needs to be modified in format, recapture loading phase data, as well as add gups and sysbench data}.
+% \schaic{The plot ~\ref{emt:figure:eval:eval-kern-inst-breakdown} above needs to be modified in format, recapture loading phase data, as well as add gups and sysbench data}.
 % \schaic{In loading phase, the timer effect will not be significant, so I feel acceptable to include timer. 
 % However, in later phase, we exclude timer, I will remove it for now.}
 
@@ -386,7 +386,7 @@ Unlike hardware MMUs, it is hard for OS software to do parallel lookups
 	% \vspace{-0.1cm}
 	\vspace{-15pt}
 	\caption{Radix MMU driver}
-	\label{fig:eval:eval-radix-never-vs-ecpt-never-flame-a}
+	\label{emt:fig:eval:eval-radix-never-vs-ecpt-never-flame-a}
 \end{subfigure}%
 	\newline % This starts a new line
 	% Subfigure 2
@@ -399,7 +399,7 @@ Unlike hardware MMUs, it is hard for OS software to do parallel lookups
 	\includegraphics[width=\textwidth]{data/ecpt_never_graphbig_bfs_default_kern_inst.pdf.corrected.pdf}
 	\vspace{-15pt}
 	\caption{ECPT MMU driver}
-	\label{fig:eval:eval-radix-never-vs-ecpt-never-flame-b}
+	\label{emt:fig:eval:eval-radix-never-vs-ecpt-never-flame-b}
 \end{subfigure}
 	\vspace{-20pt}
 	\caption{\bf Flame graph of EMT-Linux kernel instructions when running GraphBig BFS (no THP).}

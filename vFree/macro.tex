@@ -1,0 +1,89 @@
+
+
+% Editorial
+\iftrue % change to \iffalse to preview changes
+    \providecommand{\saksham}[1]{\textcolor{violet}{\textbf{[Saksham: #1]}}}
+    \providecommand{\tianyin}[1]{\textcolor{blue}{\textbf{[ty: #1]}}}
+    \providecommand{\rachit}[1]{\textcolor{purple}{\textbf{[rachit: #1]}}}
+    \providecommand{\leshna}[1]{\textcolor{pink}{\textbf{[leshna: #1]}}}
+    \providecommand{\leshnaedit}[1]{\textcolor{cyan}{#1}}
+
+    \providecommand{\ik}[1]{\textcolor{brown}{\textbf{[ishv1k: #1]}}}
+    \providecommand{\ikedit}[1]{\textcolor{magenta}{#1}}
+    \providecommand{\ikdelete}[1]{{\color{purple} \sout{#1}}} % del text
+    \providecommand{\ikreplace}[2]{{\ikdelete{#1} \ikedit{#2}}} % delete and replace text
+
+    \providecommand{\para}[1]{\smallskip\noindent {\bf #1} }
+    
+    \providecommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+    \providecommand{\question}[1]{\textcolor{cyan}{\textbf{[QUESTION: #1]}}}
+	\providecommand{\review}[1]{{\color{blue} #1}} % new text
+
+	\providecommand{\JZ}[1]{{\color{orange} #1}} % new text
+	\providecommand{\JZx}[1]{{\color{purple} \sout{#1}}} % del text
+	\providecommand{\JZc}[1]{{\color{comment} /* \textit{#1} */}} % comment
+	\providecommand{\JZd}[1]{} % exile to the void
+	\providecommand{\JZe}[1]{{\color{mujica} \uwave{#1}}} % highlight
+	\providecommand{\JZhl}{\colorbox{mujica}{\color{white} NOTE:}}
+	\providecommand{\JZtodo}{\colorbox{mygo}{\color{white} TODO:}}
+
+	\providecommand{\jz}[1]{{\JZ{#1}}} % new text
+	\providecommand{\jza}[2]{{\JZ{#1} \JZc{#2}}} % add and comment text
+	\providecommand{\jzc}[2]{{\JZe{#1} \JZc{#2}}} % comment existing text
+	\providecommand{\jzd}[2]{{\JZx{#1} \JZc{#2}}} % delete and comment text
+	\providecommand{\jzx}[2]{{\JZx{#1} \JZ{#2}}} % delete and replace text
+	\providecommand{\jzxc}[3]{{\JZx{#1} \JZ{#2} \JZc{#3}}} % replace text with comment
+	\providecommand{\jztodo}[1]{{\JZc{\JZtodo #1}}}
+	\providecommand{\jzmark}[1]{{\JZc{\JZhl #1}}}
+
+	\providecommand{\schai}[1]{{\color{blue} #1}} % new text
+	% \providecommand{\schai}[1]{#1}
+	\providecommand{\schaix}[1]{{\color{red} \sout{#1}}} % del text
+	\providecommand{\schaic}[1]{{\color{gray} /* \bf schai \textit{#1} */}} % comment
+	
+	\providecommand{\jyk}[1]{{\footnotesize{\color{cyan} {\bf JYK: #1}}}}
+	\providecommand{\jykx}[1]{{\color{cyan} \sout{#1}}}
+
+	% so we can mix \cite within colored text
+	% cite redefinition removed (conflicts with tagpdf)
+	% cite redefinition removed (conflicts with tagpdf)
+
+\else
+	\providecommand{\tianyin}[1]{#1}
+
+    \providecommand{\todo}[1]{}
+    \providecommand{\question}[1]{}
+
+	\providecommand{\JZ}[1]{#1} % new text
+	\providecommand{\JZx}[1]{} % del text
+	\providecommand{\JZc}[1]{} % comment
+	\providecommand{\JZd}[1]{} % exile to the void
+	\providecommand{\JZe}[1]{} % highlight
+	\providecommand{\JZhl}{}
+	\providecommand{\JZtodo}{}
+
+	\providecommand{\jz}[1]{#1}
+	\providecommand{\jzd}[2]{#2}
+	\providecommand{\jzc}[2]{#1}
+	\providecommand{\jzx}[2]{#2}
+	\providecommand{\jzxc}[3]{#2}
+	\providecommand{\jztodo}{}
+
+	\providecommand{\schai}[1]{#1} % new text
+	\providecommand{\schaix}[1]{} % del text
+	\providecommand{\schaic}[1]{} % comment
+
+	\providecommand{\jyk}[1]{}
+	\providecommand{\jykx}[1]{}
+
+	\providecommand{\weiwei}[1]{}
+	\providecommand{\weiweix}[1]{}
+\fi
+
+\providecommand{\paragraphb}[1]{\vspace{0.1in} \noindent{\textbf{#1}.}}
+
+\providecommand*\circled[1]{\tikz[baseline=(char.base)]{%
+            \node[shape=circle,fill=black!20,draw,inner sep=1.5pt] (char) {#1};}}
+
+\providecommand*\circledb[1]{\tikz[baseline=(char.base)]{%
+            \node[shape=circle,fill=blue!20,draw,inner sep=1.5pt] (char) {#1};}}

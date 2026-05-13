@@ -1,8 +1,8 @@
 \subsection{ECPT on EMT-Linux}
-\label{sec:ecpt_impl}
+\label{emt:sec:ecpt_impl}
 
 \subsubsection{Emulator-based Toolchain}
-\label{sec:eval:emulator}
+\label{emt:sec:eval:emulator}
 
 \noindent
 It is challenging to develop OSes for new translation architectures
@@ -26,10 +26,10 @@ Simics is closed-source and only supports existing ISAs.
 	\caption{\bf Emulator toolchain for OS development and evaluation 
 		on experimental memory architectures.}
 %	\vspace{-2.5pt}
-	\label{fig:eval:emulator}
+	\label{emt:fig:eval:emulator}
 \end{figure}
 
-We develop an emulator-based toolchain using QEMU~\cite{plat:qemu} (Figure~\ref{fig:eval:emulator}).
+We develop an emulator-based toolchain using QEMU~\cite{plat:qemu} (Figure~\ref{emt:fig:eval:emulator}).
 % \schai{QEMU's software MMU module ~\cite{} handles all virtual to physical translation requests
 %	for every off-TLB memory access in guest OS and applications.
 %	We developed our own software MMU with ECPT-based translation logic, as well as Cuckoo Walk Cache (CWC).
@@ -44,36 +44,36 @@ We use QEMU's software MMU mechanism~\cite{plat:qemu:softmmu} to develop an emul
 % }
 	% \TODO{intercepts all the MMU instructions @Siyuan please describe
 	% some details; and describe how to do instruction analysis in the figure.}
-% We implemented the ECPT MMU and ECPT MMU driver together (\S\ref{sec:lessons}).
+% We implemented the ECPT MMU and ECPT MMU driver together (\S\ref{emt:sec:lessons}).
 QEMU offers an emulated x86-64 MMU
 	which serves as a baseline for performance evaluation.
 
 Our toolchain can connect to trace-driven hardware simulators
-	%(Figure~\ref{fig:eval:emulator}) 
+	%(Figure~\ref{emt:fig:eval:emulator}) 
 	(QEMU provides no cycle-accurate simulation).
 We developed instruction and memory tracers using QEMU's TCG plugin~\cite{plat:qemu:tcgplugin}.
 % \schai{As QEMU does not provide cycle-accurate simulation yet,
 %	we further enhanced the framework by enabling its connection to a trace-driven hardware simulator
 	% we can connect the framework to a trace-driven hardware simulator
-%	(Figure~\ref{fig:eval:emulator}).}
+%	(Figure~\ref{emt:fig:eval:emulator}).}
 % \schai{We developed a instruction and memory trace 
 %	interception module with QEMU's plugin system
 %	~\cite{}.
 The instruction trace helps analyze kernel and userspace behavior
-	(\S\ref{ss:eval:eval-ecpt-os}), as well as 
+	(\S\ref{emt:ss:eval:eval-ecpt-os}), as well as 
 	hardware simulation.
 	% The module can output trace of instruction executed and associated memory requests
 		% to hardware simulator for cycle-accurate simulation.
 % We currently use DynamoRIO~\cite{plat:dynamorio} % memory hierarchy simulator to 
 %	to simulate Instructions per Cycle (IPC) for application runtime performance
-%	(\S\ref{sec:eval:hwsim});
+%	(\S\ref{emt:sec:eval:hwsim});
 %	measure and verify the page walk latency;
 % other simulators~\cite{plat:gem5,plat:sst} can also be used.
 
 % We will release the toolchains for developing, evaluating OS memory management % operating systems
 %	on new translation architectures.
 \subsubsection{ECPT MMU Driver}
-\label{ss:ecpt-mmu-driver}
+\label{emt:ss:ecpt-mmu-driver}
 
 % git diff --stat 4a17158dfa32c348bb4af8d8a24fdadc9bb69fb8 HEAD -- arch/x86/mm/pat/set_memory.c arch/x86/mm/tlb.c arch/x86/mm/pti.c
 % git diff --stat 4a17158dfa32c348bb4af8d8a24fdadc9bb69fb8 HEAD -- arch/ | grep ECPT
@@ -85,21 +85,21 @@ We use a three-way ECPT for each page size (4KB/2MB/1GB)
  	so the translation database manages nine control registers,
 	one per way; registers are updated upon a process context switch.
 The driver also manages nine registers
-	for the kernel page tables (\S\ref{ss:ecpt-kernelspace}).
+	for the kernel page tables (\S\ref{emt:ss:ecpt-kernelspace}).
 The ECPT MMU driver takes 7.4K lines of C code.
 
 The ECPT structures are implemented in the ECPT MMU driver.
 For memory efficiency, we allocate ECPTs of a specific size on demand.
 We follow the ECPT design of clustering eight translation entries into a 64-byte cache line
 to improve locality. 
-To do so, we construct the VPN tag (Figure~\ref{fig:background:ecpt-native})
-	with bits from multiple translation entries, as shown in Figure~\ref{fig:ecpt-impl:ecpt-cluster}. 
+To do so, we construct the VPN tag (Figure~\ref{emt:fig:background:ecpt-native})
+	with bits from multiple translation entries, as shown in Figure~\ref{emt:fig:ecpt-impl:ecpt-cluster}. 
 For the PTE VPN tag, each entry contributes five bits so the first seven entries together make up the VPN tag,
 	and the last entry contributes five bits as the count of valid entries in the cluster.
 The count is used to calculate occupancy (for table resizing) and for freeing the cluster.
 These metadata are managed by basic functions. % such as \texttt{\small insert\_tentry} etc.
 PUD and PMD entries use the same design but with
-	24 bits and 15 bits for the VPN tag. % (Figure~\ref{fig:background:ecpt-native}).}
+	24 bits and 15 bits for the VPN tag. % (Figure~\ref{emt:fig:background:ecpt-native}).}
 
 \begin{figure}[H]
 	\centering
@@ -108,7 +108,7 @@ PUD and PMD entries use the same design but with
 		Each entry contributes five bits for the VPN tag or a cluster count.
 		}
 %	\vspace{-5pt}
-	\label{fig:ecpt-impl:ecpt-cluster}
+	\label{emt:fig:ecpt-impl:ecpt-cluster}
 \end{figure}
 
 When a table's occupancy exceeds a threshold (0.6 as in~\cite{skarlatos2020ecpt}),
@@ -142,17 +142,17 @@ Each header is one byte and contributes three bits to encode the VPN tag and
 
 % \vspace{-1.5pt}
 \para{Optimizations.} We implemented a series of optimizations through the customizable functions,
-	driven by benchmarking and profiling (\S\ref{ss:perf-ecpt}).
+	driven by benchmarking and profiling (\S\ref{emt:ss:perf-ecpt}).
 For example, we customize the iterator % \texttt{\small tentry\_iter\_next()} 
-	% function %(Figure~\ref{code:iternext}) 
+	% function %(Figure~\ref{emt:code:iternext}) 
 	with architecture-specific optimizations
 	to accelerate range operations.
 The idea is to exploit locality within a translation entry cluster:
 	the iterator finds the next entry by pointer arithmetic, instead of hashing-based lookups,
 	when the entry is not the last one in its cluster. 
-	%We show that this optimization leads to a major reduction of OS overhead (\S\ref{ss:perf-ecpt}).
+	%We show that this optimization leads to a major reduction of OS overhead (\S\ref{emt:ss:perf-ecpt}).
 One common optimization pattern is to minimize the cost of range operations---the  
-	default implementation (e.g., Figure~\ref{code:iternext-gen}) often takes too many fine-grained hashing-based operations.
+	default implementation (e.g., Figure~\ref{emt:code:iternext-gen}) often takes too many fine-grained hashing-based operations.
 % \REVIEW{The iterator optimization reduces the cost of range operations, which are common routines in Linux --- 
 % Without knowing the cluster organization, 
 % the default implementation has to perform hash-based lookups repetitively.
@@ -162,7 +162,7 @@ One common optimization pattern is to minimize the cost of range operations---th
 % the default implementation has to perform hash-based lookups repetitively.
 % }
 % We discussed the optimizations that avoid expensive range operations
-%	in \S\ref{sec:design:opt}.
+%	in \S\ref{emt:sec:design:opt}.
 % We also implement locks of different granularities for each entry cluster,
 %	way, and tables other than the global ECPT lock.
 
@@ -178,7 +178,7 @@ Besides implementing the ECPT MMU driver and ECPT routines, we also need to prep
 It is buried under arch-specific code, but is a vital part of a workable kernel implementation.
 \schai{Advise in this section}
 In fact, if one is considering rebuilding kernel for a new translation architecture,
-	I would recommend starting from the user page table setup for example in \S \ref{sss:ecpt-init}.
+	I would recommend starting from the user page table setup for example in \S \ref{emt:sss:ecpt-init}.
 Many of the routines are called in early stage of kernel booting,
 	they are hard to understand and hard to debug.
 For example, \texttt{\_\_startup\_64} prepares page table at the bootstrapping address space;
@@ -211,7 +211,7 @@ Here we give a brief list of the most important steps and entry points for reade
 \end{comment}
 
 \subsection{Reflection on ECPT Design}
-\label{sec:reflection}
+\label{emt:sec:reflection}
 
 \noindent
 We show that building OS components is essential to 
@@ -225,13 +225,13 @@ The efforts on developing and evaluating ECPT with EMT-Linux
 	using a fast translation scheme, 
 	which were unexpected (undocumented in the original hardware design).
 % We address the challenge of managing the kernel page table (kECPT) 
-%	(\S\ref{ss:ecpt-kernelspace}) such as the paradox involved in modifying translations 
+%	(\S\ref{emt:ss:ecpt-kernelspace}) such as the paradox involved in modifying translations 
 %	of the kECPT itself and of the kernel code that manages the kECPT.
 % We reflect on the ECPT's hardware design and address the OS challenges,
 %	some of which need new hardware support and OS cooperation.
 
 \subsubsection{Managing Kernel Page Tables}
-\label{ss:ecpt-kernelspace}
+\label{emt:ss:ecpt-kernelspace}
 %
 
 \noindent
@@ -310,7 +310,7 @@ This design requires ECPT MMUs to expose another nine control registers that poi
 % ECPT can be enhanced with our idea of maintaining two set of page tables.
 
 \para{Self-Reference Paradox.}
-\label{ss:ecpt-self-reference}
+\label{emt:ss:ecpt-self-reference}
 Managing kECPTs is more challenging than uECPTs.
 Different from uECPTs that are mandated by the kernel, 
 	the kECPT manages the kernel's own code and data---translations 
@@ -321,7 +321,7 @@ This creates a challenge for ECPT which needs to move translation entries
 	moving window, if the entries map the kECPT itself 
 		or the kernel code for moving entries are missing,
 		the kernel crashes due to missing translation of the kECPT or code,
-		as shown in Figure~\ref{fig:ecpt-impl:paradox}.
+		as shown in Figure~\ref{emt:fig:ecpt-impl:paradox}.
 Frequent triggers are kernel's huge page promotion/demotion
 	which remove entries and insert new entries in different tables. 
 
@@ -381,9 +381,9 @@ forwarding table~\cite{zhou2013cuckooswitch} do not face this paradox if they do
 	\includegraphics[width=0.4\textwidth]{figs/paradox.pdf}
 	\caption{{\bf An example of self-reference paradox caused by the need of 
 		moving kECPT entries that are needed to find kernel code
-		for moving kECPT entries (\S\ref{ss:ecpt-self-reference}).}}
+		for moving kECPT entries (\S\ref{emt:ss:ecpt-self-reference}).}}
 %	\vspace{-7.5pt}
-	\label{fig:ecpt-impl:paradox}
+	\label{emt:fig:ecpt-impl:paradox}
 \end{figure}
 
 We address the paradox via a series of software-hardware endeavors.
@@ -409,7 +409,7 @@ For ECPT, any operation that may change the content of an entry
 
 \para{Atomic kECPT Switching.}
 % \paragraph{Inconsis kECPT during switch}
-\label{sec:split_kecpt}
+\label{emt:sec:split_kecpt}
 Another form of self-reference paradox manifests
 	via KPTI~\cite{linux:kpti}---when switching 
 	% \schaix{from the kernel space to the user space}
@@ -462,7 +462,7 @@ that all instructions after it will use the new kECPT.
 	
 % }
 
-% \begin{figure*}[t]
+% \begin{figure}[t]
 % 	\centering
 % 	\begin{subfigure}[b]{0.5\textwidth}
 % 		\centering
@@ -480,7 +480,7 @@ that all instructions after it will use the new kECPT.
 % 			\captionsetup{justification=centering}
 % 			\vspace{-24pt}
 % 			\caption{Micro benchmark}
-% 			\label{fig:eval:microbenchmark}
+% 			\label{emt:fig:eval:microbenchmark}
 % 		\end{subfigure}
 % 		\hfill
 % 	\raisebox{16.5pt} {
@@ -491,17 +491,17 @@ that all instructions after it will use the new kECPT.
 % 			\captionsetup{justification=centering}
 % 			\vspace{-12pt}
 % 			\caption{Macro benchmark}
-% 			\label{fig:eval:macrobenchmark}
+% 			\label{emt:fig:eval:macrobenchmark}
 % 		\end{subfigure}
 % 	}
 % 	}
 % %	\vspace{-12pt}
 % 	\caption{\bf Performance overhead of EMT-Linux over vanilla Linux (measured by the micro and macro benchmarks).}
-% 	\label{fig:eval:eval-stack-lebench}
+% 	\label{emt:fig:eval:eval-stack-lebench}
 % %	\vspace{-5pt}
-% \end{figure*}
+% \end{figure}
 
-\begin{figure*}[H]
+\begin{figure}[H]
 	\centering
 	\begin{subfigure}[b]{0.5\textwidth}
 		\centering
@@ -515,7 +515,7 @@ that all instructions after it will use the new kECPT.
 			\includegraphics[width=\textwidth]{data/radix_lebench.pdf}
 			\captionsetup{justification=centering}
 			\caption{Micro benchmark}
-			\label{fig:eval:microbenchmark}
+			\label{emt:fig:eval:microbenchmark}
 		\end{subfigure}
 		\hfill
 	\raisebox{16pt} {
@@ -524,13 +524,13 @@ that all instructions after it will use the new kECPT.
 			\includegraphics[width=\textwidth]{data/radix.pdf}
 			\captionsetup{justification=centering}
 			\caption{Macro benchmark}
-			\label{fig:eval:macrobenchmark}
+			\label{emt:fig:eval:macrobenchmark}
 		\end{subfigure}
 	}
 	}
 	\caption{\bf Performance overhead of EMT-Linux over vanilla Linux (measured by the micro and macro benchmarks).}
-	\label{fig:eval:eval-stack-lebench}
-\end{figure*}
+	\label{emt:fig:eval:eval-stack-lebench}
+\end{figure}
 
 % We add hardware support for atomic kECPT switching.
 % 	considering current x86 processors already explicitly serialize change to the CR3 register.
@@ -567,7 +567,7 @@ that all instructions after it will use the new kECPT.
 % aka, proecessor complete all updates to the instruction, before next instruction can execute.
 % mov cr3 is a classic serializing instruction.}
 \subsubsection{Implications on OS Performance}
-\label{sec:ecpt:os:perf}
+\label{emt:sec:ecpt:os:perf}
 
 \noindent
 % We show that ECPT has profound performance implications on OS memory management,
@@ -575,7 +575,7 @@ that all instructions after it will use the new kECPT.
 %	its ability to manage sparse address space
 %	and multicore scalability.
 {\bf Managing Sparse Address Space.}
-\label{sec:reflection:sparse}
+\label{emt:sec:reflection:sparse}
 % Despite optimizations that utilize spatial locality of clustered entries,
 %	range operations in ECPT are still much more expensive than radix page tables.
 % However, managing large address ranges is a common memory management operation pattern.
@@ -648,7 +648,7 @@ Once the counter drops to zero, the CWC/CWT bits can be promptly and safely clea
 % % The scripts they use always resize to the optimal space arrangement (or even lower than optimal)
 % % Hence, despite their script is lost, the following two points can still stand.
 
-% In practice, ECPT exhibits much higher memory usage than what is documented in the original paper even with all optimizations applied (\S\ref{sec:ecpt-opti}), as shown in Table \ref{}\JZtodo.
+% In practice, ECPT exhibits much higher memory usage than what is documented in the original paper even with all optimizations applied (\S\ref{emt:sec:ecpt-opti}), as shown in Table \ref{}\JZtodo.
 % Such difference is potentially due to two factors:
 % %
 % First, the original paper assumes that ECPT always picks optimal resize decisions.
@@ -708,7 +708,7 @@ This appears acceptable right now, but may be a problem if designers want to rep
 \end{comment}
 
 % \subsubsection{Implemented and Potential Optimizations}
-% \label{sec:ecpt-opti}
+% \label{emt:sec:ecpt-opti}
 
 % % \paragraph{PTE Clustering}
 
@@ -731,7 +731,7 @@ This appears acceptable right now, but may be a problem if designers want to rep
 % \paragraph{Tracking Non-leaf PTE}
 
 \para{Multicore Scalability.}
-\label{sec:multithreading}
+\label{emt:sec:multithreading}
 % We have not extensively evaluated the multi-core scalability 
 %	of ECPT on EMT-Linux where multiple kernel threads 
 %	concurrently change the same table or way in ECPT.

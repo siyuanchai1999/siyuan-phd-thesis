@@ -1,0 +1,76 @@
+\begin{abstract}
+IO memory protection prevents malicious DMA-capable IO devices from executing errant data transfers 
+    into host memory. 
+Modern servers enable memory protection by requiring IO devices 
+    to operate on virtual IO addresses, 
+    and using IOMMU % (along with specialized caches) 
+    to perform fast virtual-to-physical address translation upon each DMA. 
+Existing IO memory protection mechanisms offer powerful, so-called strict, safety guarantees; 
+however, they require at least one VM exit per DMA in virtualized environments 
+    to invalidate translation entries in IOMMU caches. 
+These VM exits in strict protection---even with state-of-the-art 
+    device passthrough mechanisms, memory management, 
+    and hardware-assisted translation---result in 83--95$\%$ 
+    degradation in application-level throughput! 
+Real-world deployments today have to choose either high performance 
+    or strict IO memory protection, but not both. 
+
+We present {\name}, a simple modification to existing IO memory protection mechanisms 
+    that makes strict IO memory protection feasible in virtualized environments. 
+The key insight in {\name} is that, in virtualized environments, 
+    it is possible to reduce the overheads of strict IO memory protection 
+    to a bare minimum by \textit{increasing} the cost of address translation. 
+Intuitively, this is because each VM exit has much higher cost 
+    than the worst-case translation cost. 
+{\name} design incorporates two ideas---\textit{one-for-many invalidations} and \textit{deferred free page}---that, 
+    when put together, result in higher address translation cost but significantly 
+    reduce the number of VM exits (and hence, IO memory protection overheads) 
+    while maintaining strict IO memory protection. 
+We implement {\name} on Linux, and evaluate it across multiple real-world applications. 
+Our evaluation suggests that, at the cost of one dedicated core, 
+    {\name} consistently achieves performance within 1--8$\%$ of 
+    the unprotected system---74--147$\times$ higher than state-of-the-art IO memory protection mechanisms. 
+
+% We consider the problem of IO memory protection in virtualized environments.
+% I/O memory protection in virtual machines (VMs)
+%   defends guest systems against errant DMAs
+%   through virtualized IOMMUs (vIOMMUs).
+% However, ensuring strong isolation for data integrity and confidentiality 
+%     requires invalidating I/O address translations 
+%     from hardware caches (e.g., IOTLBs) after every DMA completion.
+% Since such invalidations must be 
+%   done by the host, they cause frequent VM exits
+%   and incur excessive performance overhead
+%   (up to 95\% throughput drops). 
+% Consequently, existing systems often relax protection guarantees, 
+%     yet still suffer non-trivial performance costs.
+
+% This paper shows that the cost of I/O memory protection
+%   in virtualized environments is not inherent.
+% We present \name, a new design that delivers strict vIOMMU protection 
+%   at near-zero overhead compared to unprotected DMA. 
+% The insight is that frequent VM exits for hardware invalidation are not necessary but
+%   artifacts of 
+%   globally serializing invalidation across threads
+%   to enforce safety.
+% \name{} eliminates all unnecessary serializations that are not essential
+%   to the safety invariant of strict protection which only requires 
+%   strict ordering of invalidations {\it per thread}.
+% It promotes highly concurrent invalidation processing 
+%   across threads,
+%   avoiding unnecessary VM exits and scaling with modern multi-core systems,
+% without compromising isolation.
+% % \name{} is realized by two complementary techniques:
+% % \emph{safely batched invalidation} which decouples the preparation 
+% %  of invalidation requests from their submission, which offers 
+% %  the opportunities to effectively coalescing concurrent requests,
+% % and \emph{deferred free pages} which enforces safety ordering
+% %  without blocking the CPU during invalidation.
+% % We implement \brand in Linux kernel 6.12.9 with fewer than 1.5k lines of change.
+% On modern hardware with nested IOMMU and 400 Gbps networking,
+%   \name\ achieves up to 7$\times$ throughput improvement on Rx traffic
+%   and up to 42$\times$ on Tx traffic over vanilla Linux/KVM
+%   with strict protection; \name's performance is close to that without 
+%   using vIOMMU.
+
+\end{abstract}

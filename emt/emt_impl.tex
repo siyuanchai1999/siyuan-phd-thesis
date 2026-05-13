@@ -1,5 +1,5 @@
 \subsection{EMT-Linux with x86-64 MMU Drivers}
-\label{sec:impl}
+\label{emt:sec:impl}
 
 \noindent
 We develop EMT on Linux, referred to as EMT-Linux.
@@ -37,11 +37,11 @@ Specifically, we turn functions no more than three lines into macro or inline fu
 % 	to call, instead of turning big code into macros.
 We ensure that EMT does not break performance characteristics, e.g., 
 	no increase of stack size or call stacks, and no decrease 
-	of instruction cache hit rates in most cases (\S\ref{sec:eval:eval-EMT-radix-vs-vanilla}). 
+	of instruction cache hit rates in most cases (\S\ref{emt:sec:eval:eval-EMT-radix-vs-vanilla}). 
 % The measured instruction cache hit rates
 % 	of EMT-Linux is almost the same as vanilla Linux.
 % \schai{The measured instruction cache hit rates on EMT-Linux differ from those on vanilla Linux by at most 0.8\%}.
-%	cache hit rates (\S\ref{sec:eval:eval-EMT-radix-vs-vanilla}).
+%	cache hit rates (\S\ref{emt:sec:eval:eval-EMT-radix-vs-vanilla}).
 
 %	which are replaced by architecture-specific
 %    code at compile time.
@@ -73,7 +73,7 @@ Hence, EMT supports all virtual memory features of vanilla Linux and
 % It has a drawback 
 % of making the code fixed at compile time. If we make some argument that 
 % translation architecture can be changed at runtime, this could be a problem.}
-% \schai{Our evaluation (\S\ref{sec:eval:eval-EMT-radix-vs-vanilla}) show that EMT has negligible overhead (within the standard deviation)}.
+% \schai{Our evaluation (\S\ref{emt:sec:eval:eval-EMT-radix-vs-vanilla}) show that EMT has negligible overhead (within the standard deviation)}.
 % of application performance overhead.
 % in section \ref*{sec:eval:eval-EMT-radix-vs-vanilla}} 
 
@@ -118,8 +118,8 @@ void walk_tobj_range(start, end, walk) {
 } /* mm/pagewalk.c */
 \end{minted}
 
-\caption{\bf Rewriting code in Figure~\ref{fig:need:linux-performance-opt} with EMT.}
-\label{fig:interface-compare}
+\caption{\bf Rewriting code in Figure~\ref{emt:fig:need:linux-performance-opt} with EMT.}
+\label{emt:fig:interface-compare}
 %\vspace{-5pt}
 \end{figure}
 
@@ -129,14 +129,14 @@ void walk_tobj_range(start, end, walk) {
 	\centering
 	\includegraphics[width=0.5\textwidth]{figs/linux-no-interface-new}
 	\caption{\bf An example of Linux's memory management code refactored with no tree assumption. \TODO{Improve fig}}
-	\label{fig:impl:refactor}
+	\label{emt:fig:impl:refactor}
 \end{figure}
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.5\textwidth]{figs/linux-performance-opti-new}
 	\caption{\bf Low-level optimizations in Linux code kept after refactoring. \TODO{TODO}}
-	\label{fig:need:linux-performance-opt-new}
+	\label{emt:fig:need:linux-performance-opt-new}
 \end{figure}
 \end{comment}
 
@@ -147,9 +147,9 @@ void walk_tobj_range(start, end, walk) {
 
 % A few tricky cases come from kernel routines with overloaded semantics 
 % % which only make sense with the radix tree structure 
-%	(e.g., Figure~\ref{fig:need:linux-no-interface});
+%	(e.g., Figure~\ref{emt:fig:need:linux-no-interface});
 %    we did not understand certain semantics which 
-%    caused issues on ECPT (\S\ref{sec:ecpt_impl}).
+%    caused issues on ECPT (\S\ref{emt:sec:ecpt_impl}).
 % This again shows the importance of a well-defined OS interface.
 
 % Refactoring Linux code with the EMT customizable functions is more challenging,
@@ -162,9 +162,9 @@ void walk_tobj_range(start, end, walk) {
 
 %    intermediate translation entries (e.g., a L2 page table entry).
 
-% Figures~\ref{fig:impl:refactor} and~\ref{fig:impl:refactor} shows the refactored code of 
- %   the vanilla Linux code in Figure~\ref{fig:need:linux-no-interface} 
- %   and~\ref{fig:need:linux-performance-opt}, respectively.
+% Figures~\ref{emt:fig:impl:refactor} and~\ref{emt:fig:impl:refactor} shows the refactored code of 
+ %   the vanilla Linux code in Figure~\ref{emt:fig:need:linux-no-interface} 
+ %   and~\ref{emt:fig:need:linux-performance-opt}, respectively.
 
 % In general, there are two ways to redirect the interface functions 
 %	its MMU driver implementation: 
@@ -218,7 +218,7 @@ static inline pte_t * pte_iter_next(i) {
 \end{minted}
 
 \caption{Simplified code for Macro redirection}
-\label{code:PFhandler}
+\label{emt:code:PFhandler}
 \end{figure}
 
 \subsubsection{Refactoring \essgrps}
@@ -305,10 +305,10 @@ handle_pte_fault(vma, pmd, addr);
 \end{minted}
 
 \caption{Simplified code for Linux PF handler}
-\label{code:PFhandler}
+\label{emt:code:PFhandler}
 \end{figure}
 
-For example, while we are working with the PF handler (Figure~\ref{code:PFhandler}) in linux kernel,
+For example, while we are working with the PF handler (Figure~\ref{emt:code:PFhandler}) in linux kernel,
 	we realize that the \texttt{pmd\_none} function 
 	conveys a overloading semantics that is neither a huge page or a directory mapping.
 Thus, we tried to replace it with \texttt{pte\_is\_huge} and \texttt{pte\_is\_directory}.
@@ -381,7 +381,7 @@ handle_pte_fault(vma, pmd, addr);
 \end{minted}
 
 \caption{Simplified code for Linux PF handler}
-\label{code:PFhandler}
+\label{emt:code:PFhandler}
 \end{figure}
 
 Based on this observation, thanks to the extensibility of \optgrps functions,
@@ -413,7 +413,7 @@ They iterating through all page table entries
 	by walking down the page table tree structure level by level until hitting the leaf level.
 
 
-A generic example of the range operations is Figure \ref{code:walk-range}
+A generic example of the range operations is Figure \ref{emt:code:walk-range}
 	which apply specific operation on every page table entry in side 
 	given \texttt{[start, end)} range.
 Note that this is a simplified version; in the real code,
@@ -510,7 +510,7 @@ void walk_page_range(mm, addr, end)
 \end{minted}
 
 \caption{Simplified walk\_p*d\_range functions}
-\label{code:walk-range}
+\label{emt:code:walk-range}
 \end{figure}
 
 % \para{Refactoring experience}
@@ -648,21 +648,21 @@ The implementation is also straightforward:
 \para{OS Memory Management with EMT.}
 In EMT-Linux, OS memory management is no longer
 	hardwired to specific translation schemes.
-Meanwhile, EMT-Linux reserves hardware-specific optimizations like in Linux---both % (Figure~\ref{fig:interface-compare-linux}).
+Meanwhile, EMT-Linux reserves hardware-specific optimizations like in Linux---both % (Figure~\ref{emt:fig:interface-compare-linux}).
 %	that avoid redundant 
 %	page table walk in each loop iteration, and additionally directly read translation entries in place. 
 % Note that both basic and customizable functions can be optimized by the MMU drivers.
 % Unlike Linux which sacrifices extensibility for performance, 
 	basic and customizable functions can be instantiated by different MMU drivers.
-Figure~\ref{fig:interface-compare} shows the code in
-	EMT-Linux that implements the hardwired Linux routine in Figure~\ref{fig:need:linux-performance-opt}.
-It uses the translation-object iterator (see Figure~\ref{code:iternext}) to scan all the pages in a memory region.
+Figure~\ref{emt:fig:interface-compare} shows the code in
+	EMT-Linux that implements the hardwired Linux routine in Figure~\ref{emt:fig:need:linux-performance-opt}.
+It uses the translation-object iterator (see Figure~\ref{emt:code:iternext}) to scan all the pages in a memory region.
 % by querying 	the translation entries. 
 This is a common pattern used in 
 	many OS memory management operations 
 	such as page promotion and migration, as well as page eviction (e.g., using LRU and MGLRU).
 
-Figure~\ref{fig:pfh-example} shows a skeleton of the page fault handler in EMT-Linux.
+Figure~\ref{emt:fig:pfh-example} shows a skeleton of the page fault handler in EMT-Linux.
 In vanilla Linux, the page fault handler walks down the page-table tree level by level 
 	to determine the type of faults and dispatch them to corresponding subroutines
 %In most cases, the vanilla handler does not directly operate intermediate levels of the tree 
@@ -722,7 +722,7 @@ static vm_fault_t __handle_mm_fault(vma, vaddr, flags)
 \end{minted}
 	%
 \caption{\bf Snippet of EMT-Linux's page fault handler.}
-\label{fig:pfh-example}
+\label{emt:fig:pfh-example}
 	% \vspace{-5pt}
 \end{figure}
 
@@ -752,7 +752,7 @@ Batch invalidation is supported by customizable functions.}
 % EMT-Linux currently does not target IOMMU translation for DMA requests.
 % Linux code for IOMMU translation is also hardwired to the radix-tree scheme;
 % 	the EMT approach can potentially apply.
-% % However, in ECPT, this is not the case as some bits are always meaningful regardless of the P bit (Figure \ref{fig:ecpt-impl:ecpt-cluster}).
+% % However, in ECPT, this is not the case as some bits are always meaningful regardless of the P bit (Figure \ref{emt:fig:ecpt-impl:ecpt-cluster}).
 % % The introduction of swap customizable functions enables ECPT and other architectures with a similar caveat to store the swap information partially in dedicated locations
 % %	to keep the Linux swap functionality intact.
 
@@ -767,7 +767,7 @@ Batch invalidation is supported by customizable functions.}
 % In comparison, due to the lack of the translation entry abstraction and the ability 
 %	to directly reference a translation entry,
 %	redundant page table walks must be performed within \texttt{pmap\_is\_modified},
-%	despite one having been performed a few lines before for the same page (Figure~\ref{fig:interface-compare-pmap}). 
+%	despite one having been performed a few lines before for the same page (Figure~\ref{emt:fig:interface-compare-pmap}). 
 % This could result in a further loss of theoretical performance and flexibility.
 
 % Linux can certainly enable the same low-level optimizations, but with the cost of 
@@ -811,10 +811,10 @@ This encoding enables the MMU driver to realize all the optimizations
 For example, the MMU driver can directly operate on the PMD or PUD entries
 	to implement Linux's split page table lock~\cite{linux:sptl} through 
 	the \texttt{\small addr\_range\_get\_lock} customizable function
-	(Figure~\ref{fig:interface-compare}). 
+	(Figure~\ref{emt:fig:interface-compare}). 
 The MMU driver can also implement optimizations that leverage 
 	spatial locality of the tree structure,
-	as exemplified by the iterator (Figure~\ref{code:iternext}).
+	as exemplified by the iterator (Figure~\ref{emt:code:iternext}).
 Encoding attributes of x86 page table entries via translation object API
 	is straightforward by reading/writing bits in the entries, 
 	and our x86-64 MMU driver
@@ -824,7 +824,7 @@ Encoding attributes of x86 page table entries via translation object API
 % Our x86-64 MMU driver defines the translation entry to be a collection 
 %	of all page table entries associated with.
 % We come to this design to preserve optimizations for tree-like structures.
-% To take the PFH as an example (Figure~\ref{fig:pfh-example}),
+% To take the PFH as an example (Figure~\ref{emt:fig:pfh-example}),
 %	we query the translation database with \texttt{find\_tentry} 
 %	which performs a page table walk in MMU driver and returns 
 %	the translation entry as a collection of all page table entries.
@@ -862,7 +862,7 @@ Encoding attributes of x86 page table entries via translation object API
 % Thus, it is a cheaper check than VMA checks and goes first in our implementation.
 % In contrast, architectures like ECPT has more expensive checks
 %	since the high granularity page table entries contain no information about low granularity entries mapping
-%	(details discussed in \S\ref{sec:reflection:sparse}).
+%	(details discussed in \S\ref{emt:sec:reflection:sparse}).
 % Concerning the performance, we reverse the order of the two checks in ECPT MMU driver.
 
 % We utilize Radix's hierarchical structure in \texttt{addr\_range\_get\_lock} to lock the address range;
@@ -925,7 +925,7 @@ and it co-exists with the x86-64 radix MMU driver.
 %		an ad hoc design is to allocate 4MB contiguously which may face pressure when memory is fragmented.
 %	One optimization is to seperate two page tables, and create a dedicated registers to enable switch between them.
 
-	% The basic functions of translation database (\ref{fig:api:db})
+	% The basic functions of translation database (\ref{emt:fig:api:db})
 	% The FPT shared their experience of building a Linux support for L3 + L2 folding only.
 	% They took advantage of vanilla Linux's tree page table abstraction, and  
 

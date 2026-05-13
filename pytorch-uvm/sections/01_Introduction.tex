@@ -1,0 +1,87 @@
+\subsection{Introduction}
+\label{uvm:sec:intro}
+
+Modern Large Language Model (LLM) inference workloads
+    are increasingly bottlenecked by GPU memory capacity:
+    flagship model sizes grow roughly $410\times$ every two years,
+    while GPU memory only doubles in the same period~\cite{ai-memory-wall}.
+A single high-end accelerator can no longer hold even a moderately sized model
+    together with its KV caches.
+To overcome the GPU memory wall,
+    modern applications rely on application-driven \textbf{manual memory management} that
+    stages weights and activations in host CPU memory~\cite{flexgen, infinigen, headinfer, vllm}.
+Each such framework re-implements its own memory manager
+    and dictates when and where to move data.
+
+Manual memory management poses two major challenges.
+First, offload paths are not overhead-free:
+    they demand careful profiling so that copy cost stays hidden behind computation.
+Second, GPU kernels and allocator logic must be rewritten for
+    \emph{every} application that adopts offloading,
+    and tuned carefully to avoid fatal GPU out-of-memory (OOM) errors.
+That refactoring is costly: over 7K lines of code in DLRM alone~\cite{fbgemm_tbe_training_docs}.
+
+
+In contrast, driver-managed automatic memory such as CUDA Unified Virtual Memory (UVM)
+    offers another way past the GPU memory wall.
+UVM lets the GPU transparently access CPU and peer-GPU memory,
+    enabling oversubscription without application-specific offload code---in principle,
+    it could retire much of the bespoke machinery that manual paths require.
+In practice, however, UVM has been considered too slow for production:
+    PyTorch's own documentation advises against \texttt{cudaMallocManaged},
+    the default UVM allocator.
+Prior work reports that UVM is over $5\times$ slower than
+    application-level offloading on LLM workloads~\cite{infinigen}.
+The gap is two-fold.
+First, frameworks such as PyTorch and vLLM
+    offer no first-class UVM integration,
+    so managed allocations bypass their caching and pooling optimizations
+    and incur memory traffic that an application-aware allocator could elide.
+Second, the driver has no visibility into high-level access patterns,
+    so page faults and migrations are triggered late and often evict data
+    that the application is about to reuse.
+
+We present {\uvmname}, an application-aware UVM substrate for PyTorch
+    that closes this performance gap and turns UVM
+    into a practical tool for LLM inference.
+{\uvmname} is built around three pieces that propagate
+    application-level intent down to the UVM driver
+    without changing model code.
+First, a \emph{custom UVM-aware caching allocator}
+    proactively returns cached memory to the driver when the GPU is oversubscribed,
+    avoiding the OOM kills that naive UVM caching suffers.
+Second, a \emph{discard-based eviction} strategy
+    marks partially-free cached blocks as evictable
+    so the driver can reclaim them without copying their data back to host.
+% Third, \emph{prefetching with location hints}
+%     hides GPU page-fault latency on reuse
+%     by warming the next layer's tensors before they are needed.
+
+Even with these optimizations, page-fault migration still degenerates into thrashing
+    once the working set substantially exceeds GPU memory:
+    every fault-in forces an eviction of a page that is itself about to be re-used,
+    and discard reduces eviction cost but does not break the eviction--re-fault cycle.
+We therefore explore two complementary mechanisms.
+\emph{Direct CPU-memory access} leaves cold pages on host
+    and lets the GPU read them in place over the interconnect,
+    short-circuiting the eviction--re-fault cycle entirely.
+\emph{Access-counter--based migration} defers fault-in until a page
+    has been touched above a threshold,
+    filtering one-shot accesses that would otherwise pay full migration cost
+    only to be evicted shortly after.
+Together, they reveal that the right policy depends on the interconnect
+    and active working-set ratio, not on the workload alone.
+
+We implement {\uvmname} on PyTorch~2.8 with CUDA~13
+    and evaluate Hugging~Face OPT and Qwen inference
+    on A100-PCIe, H100-PCIe, and GH200 NVLink-C2C.
+When memory is not oversubscribed, {\uvmname} matches PyTorch's native
+    \texttt{cudaMalloc}-based allocator within $20\%$,
+    while already outperforming default UVM by $52\times$--$58\times$
+    and HF KV-cache offloading by $30\times$--$35\times$.
+Under low oversubscription (ratio $<1.10$), where the native allocator crashes with OOM,
+    {\uvmname} remains $45\times$ faster than default UVM and $27\times$ faster than HF offloading.
+Under high oversubscription {\uvmname} still avoids OOM,
+    but narrows to $1.6\times$--$1.7\times$ over default UVM
+    and falls behind HF offloading by $\sim\!3\times$---a gap we are actively closing
+    via the thrashing-mitigation mechanisms described above.

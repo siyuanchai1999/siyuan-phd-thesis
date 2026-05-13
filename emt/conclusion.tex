@@ -1,5 +1,5 @@
 \subsection{Concluding Remarks}
-\label{sec:conclusion}
+\label{emt:sec:conclusion}
 
 \noindent
 EMT is an OS framework for developing and evaluating
@@ -49,7 +49,7 @@ high-level functions are rarely replaced on a large scale in the vast majority
 of memory translation designs. This is because these high-level functions are
 inherently more architecture-independent. So, it may not be worth it to refactor
 every function call like what we do for the low layers. For this reason, we
-employ low-overhead runtime checks as shown in Figure \ref{code:if} to implement
+employ low-overhead runtime checks as shown in Figure \ref{emt:code:if} to implement
 function override for high-level interface implementations. Specifically, we
 define a set of VFS-like function pointer structures in units of \igrp, allowing
 the user to assign alternative implementations for each function. Then, in the

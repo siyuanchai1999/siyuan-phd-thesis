@@ -1,0 +1,56 @@
+\begin{abstract}
+Modern Large Language Model (LLM) inference workloads
+    are increasingly bottlenecked by GPU memory capacity:
+    flagship model sizes grow roughly $410\times$ every two years,
+    while GPU memory only doubles in the same period.
+To run these models on a single GPU,
+    today's serving frameworks resort to bespoke,
+    application-level offloading of model weights and KV caches
+    to host memory~\cite{flexgen, infinigen, headinfer, vllm}.
+Each such framework re-implements its own memory management,
+    is brittle to model and workload changes,
+    and provides little benefit to the broader ecosystem.
+
+Unified Virtual Memory (UVM) is, in principle,
+    a natural systems-level answer to this problem:
+    it lets the GPU transparently access CPU and peer-GPU memory,
+    enabling oversubscription without any application-level offloading code.
+In practice, UVM has been considered too slow to use in production:
+    PyTorch's own documentation advises against \texttt{cudaMallocManaged},
+    and prior work reports that UVM is over $5\times$ slower than
+    application-level offloading on LLM workloads~\cite{infinigen}.
+The root cause is two-fold:
+    (i)~UVM lacks any knowledge of application-level access patterns,
+        so it incurs long page-fault and migration latencies; and
+    (ii)~modern AI frameworks such as PyTorch and vLLM
+        provide no first-class support for UVM,
+        so UVM bypasses their caching and allocation optimizations.
+
+We present {\uvmname}, an application-aware UVM substrate for PyTorch
+    that closes this performance gap and turns UVM
+    into a practical tool for LLM inference.
+{\uvmname} introduces three pieces:
+    a \emph{custom UVM-aware caching allocator}
+        that proactively returns cached memory to CUDA when the GPU is oversubscribed,
+        avoiding the OOM kills that naive UVM caching suffers;
+    a \emph{discard-based eviction} strategy
+        that uses \texttt{cudaMemDiscardBatchAsync} to mark partially-free
+        cached blocks as evictable without copying their data back to the host;
+    and \emph{prefetching with location hints}
+        (\texttt{cudaPrefetchAsync} + \texttt{cudaMemAdvise})
+        to hide GPU page-fault latency on reuse.
+We implement {\uvmname} on PyTorch~2.8 with CUDA~13
+    and evaluate Hugging~Face OPT-13B inference
+    on A100-PCIe, H100-PCIe, and GH200 NVLink-c2c systems.
+
+When memory is not oversubscribed, {\uvmname} matches PyTorch's native
+    \texttt{cudaMalloc}-based caching allocator within $4$--$20\%$.
+In the low-oversubscription regime, where the native allocator crashes with OOM,
+    {\uvmname} is the fastest option,
+    delivering up to $45\times$--$58\times$ speedup over naive UVM
+    and $8\times$--$35\times$ over Hugging~Face's KV-cache offloading.
+Under high oversubscription {\uvmname} still avoids OOM,
+    but narrows to $1.6\times$--$1.7\times$ over default UVM
+    and falls behind HF offloading by $\sim\!3\times$---a gap we are actively closing
+    via the thrashing-mitigation mechanisms described above.
+\end{abstract}

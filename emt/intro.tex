@@ -1,5 +1,5 @@
 \subsection{Introduction}
-\label{sec:intro}
+\label{emt:sec:intro}
 
 \begin{quote}
 	``It so happens that a tree format is the only sane format...''~\cite{linux:torvalds_pt}
@@ -100,14 +100,14 @@ As a result, supporting a new architecture often requires heavy
     in architecture-independent modules.
 % This is a daunting task, given the size and complexity of modern memory management subsystems 
 %	and their tight coupling with memory translation 
-%	(\S\ref{sec:background}).
+%	(\S\ref{emt:sec:background}).
 Essentially, Linux provides no extensible
 	interface for memory translation,
 	unlike its
 	other subsystems (e.g., VFS for file systems~\cite{linux:vfs}). 
 	% (which enables diverse filesystems for different storage devices and usages).
 % Despite the proposal of reusing VFS for memory management~\cite{tabatabai:hotos23},
-%	VSF cannot provide native support for memory translation (\S\ref{sec:need}).
+%	VSF cannot provide native support for memory translation (\S\ref{emt:sec:need}).
 % is caused by 
 %	historical views of memory subsystem, as reflected by the quotes from 
 %	Torvalds in 2002.
@@ -118,7 +118,7 @@ Essentially, Linux provides no extensible
 %	have more extensible memory management systems (from Mach's design~\cite{rashid1987machine});
 % but, their address map interface is
 %	not expressive enough for hardware-specific optimizations
-%	in OS memory management (\S\ref{sec:need}).
+%	in OS memory management (\S\ref{emt:sec:need}).
 
 % Modern mm subsystem is very complex with many features (e.g., THP, PTI)
 %	and their implementations are tightly coupled with address translation.

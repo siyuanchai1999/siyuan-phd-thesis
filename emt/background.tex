@@ -1,5 +1,5 @@
 \subsection{Background}
-\label{sec:background}
+\label{emt:sec:background}
 
 \subsubsection{Memory Translation Hardware}
 
@@ -12,11 +12,11 @@ Upon a TLB miss, the MMU searches the translation structures (e.g., a page table
 	to obtain the translation---the virtual-to-physical address mapping.
 
 \para{x86 Translation Scheme.}
-%\label{sec:background:tree}
+%\label{emt:sec:background:tree}
 % Tree-based translation is the {\it de facto} scheme used by commodity systems.
 All x86 processors since Intel 80386 have used a radix tree,
 %	to record the mapping from virtual to physical addresses,
-	as depicted in Figure~\ref{fig:background:radix-native}.
+	as depicted in Figure~\ref{emt:fig:background:radix-native}.
 The depth of this tree has increased from two levels in 80386 to four levels in x86-64,
 	with the fifth level upcoming~\cite{intel:5level,intel:5level:implement}
 	and already supported in Linux~\cite{linux:5level-pt}.
@@ -27,7 +27,7 @@ The depth of this tree has increased from two levels in 80386 to four levels in 
 	\centering
 	\includegraphics[width=0.475\textwidth]{figs/x86-walk}
 	\caption{\bf Radix-tree based page table walk in x86-64 ISA.}
-	\label{fig:background:radix-native}
+	\label{emt:fig:background:radix-native}
 \end{figure}
 
 The main advantage of radix-tree based translation is space efficiency---tables at each level are created on demand---if at
@@ -65,7 +65,7 @@ It is reported that nested translation can take more than 50\%
 % To translate a given virtual address (VA) into a physical address (PA),
 %	the software or hardware must sequentially walk the tree,
 %		and walk down recursively using the addresses and control bits stored in the related \ptes.
-% Figure \ref{figure:background:radix-native} illustrates the process.
+% Figure \ref{emt:figure:background:radix-native} illustrates the process.
 
 % Since multiple \ptes are referred to during the walk process, when creating and maintaining radix page tables,
 %	the operating system may also need to check and update the status of other related \ptes.
@@ -80,11 +80,11 @@ A recent proposal from Arm, known as Flattened Page Table or FPT~\cite{park2022f
 	flattens the x86 page tables by dynamically merging intermediate tree levels
 	to reduce indirections and
 	prioritize caching of page table entries.
-Specifically, FPT tries to merge L4 and L3, as well as L2 and L1, in Figure~\ref{fig:background:radix-native},
+Specifically, FPT tries to merge L4 and L3, as well as L2 and L1, in Figure~\ref{emt:fig:background:radix-native},
 	shortening the walk by half.
 
 \para{Hashing-based Translation and ECPT.}
-%\label{sec:background:ecpt}
+%\label{emt:sec:background:ecpt}
 Hashing is being actively revisited for translation~\cite{jovan2022nestedecpt,skarlatos2020ecpt,jovan2023memory,yaniv2016hash,vmware2021hashing,kanellopoulos2023utopia,gosakan2023mosaic, Kwon24}.
 %To address the limitations of tree-based translation,
 %	extensive efforts have been made to .
@@ -92,7 +92,7 @@ We focus on ECPT (Elastic Cuckoo Page Table)~\cite{skarlatos2020ecpt},
 	a new hashing-based scheme
 	which effectively speeds up translation with fully parallel lookups
 	of page table entries.
-%	reduce translation overhead by an average of 41\% over x86-64. %'s radix-tree scheme. % (\S\ref{sec:background:tree})
+%	reduce translation overhead by an average of 41\% over x86-64. %'s radix-tree scheme. % (\S\ref{emt:sec:background:tree})
 %	and is applicable to nested translation~\cite{jovan2022nestedecpt}.
 
 % ECPT is an experimental architecture that is drastically different 
@@ -106,7 +106,7 @@ We focus on ECPT (Elastic Cuckoo Page Table)~\cite{skarlatos2020ecpt},
 %	(which argubly would benefit more from a clean-slate OS than 
 %	improving extensibility of existing ones).
 
-Figure~\ref{fig:background:ecpt-native} depicts ECPT-based memory translation.
+Figure~\ref{emt:fig:background:ecpt-native} depicts ECPT-based memory translation.
 % In a nutshell, ECPT is an advanced hashing-based translation architecture. 
 Different from conventional hashed 
 	page tables~\cite{yaniv2016hash,Dougan:1999,huck1993architectural,talluri1995pagetable,Gray05}, 
@@ -144,7 +144,7 @@ During translation, if a requested page hits a CWC, the MMU can directly look up
 % The ways are subsequently used for address translation of pages at different granularities.
 % Note that, due to hashing, physically adjacent \ptes may map discrete virtual memory regions.\JZc{TODO: Seems we need to settle the meaning of term "way"}
 
-% Figure \ref{figure:background:ecpt-native} illustrates the page walk of ECPT.
+% Figure \ref{emt:figure:background:ecpt-native} illustrates the page walk of ECPT.
 % When translating a VA, the page table walker calculates the hashes for the VA, accesses all ways that the \pte \textit{may} present in parallel,
 %	and fetches all entries at the calculated hash table slots.
 % The walker then checks the tags of each obtained entries and consumes the one with the right VA for translation.
@@ -172,11 +172,11 @@ During translation, if a requested page hits a CWC, the MMU can directly look up
 	\includegraphics[width=0.475\textwidth]{figs/cuckoo-walk-v3}
 	\caption{\bf Parallel page-table lookup in an ECPT-based architecture~\cite{skarlatos2020ecpt}
 		using three-way cuckoo hashing.}
-	\label{fig:background:ecpt-native}
+	\label{emt:fig:background:ecpt-native}
 \end{figure}
 
 \subsubsection{OS Memory Management}
-\label{sec:background:mm}
+\label{emt:sec:background:mm}
 
 \noindent
 The OS manages in-memory translation structures like page tables

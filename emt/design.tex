@@ -1,5 +1,5 @@
 \subsection{EMT Design}
-\label{sec:design}
+\label{emt:sec:design}
 
 \noindent
 Extensible Memory Translation (EMT) is an OS framework
@@ -8,8 +8,8 @@ Extensible Memory Translation (EMT) is an OS framework
 % In this section, we discuss the OS framework;
 %	we discuss our emulator-based toolchains for 
 %	developing and evaluating experimental translation
-%	architectures like ECPT in \S\ref{sec:ecpt_impl}.
-Figure~\ref{fig:emt-overview} gives a high-level overview of EMT.
+%	architectures like ECPT in \S\ref{emt:sec:ecpt_impl}.
+Figure~\ref{emt:fig:emt-overview} gives a high-level overview of EMT.
 % We target Linux % , instead of more extensible OS kernels (e.g., microkernels~\cite{krueger1993tools}
 %	% and exokernels~\cite{engler1995avm})
 %	as it is still the {\it de facto} commodity OS for memory-intensive computing
@@ -21,7 +21,7 @@ The design and implementation of EMT achieves the following goals:
 \item{\bf EMT is an architecture-neutral framework.}
 EMT is not hardwired to specific translation structures such as
 	multi-level tree in Linux.
-% As discussed in \S\ref{sec:need:hardwire},
+% As discussed in \S\ref{emt:sec:need:hardwire},
 %	hardwired designs are fundamentally limited in extensibility.
 %In principle, s
 Supporting a new memory translation scheme should not change % effectively reuse
@@ -50,12 +50,12 @@ EMT allows architecture-dependent code
 % functionality. However, memory translation developers would want to improve the
 % performance by applying architecture-specific optimizations to the kernel stack.
 % \interface provides an option to register architecture-specific functions to
-% satisfy the needs (\optgrps in Figure \ref{figure:interface-internal}).
+% satisfy the needs (\optgrps in Figure \ref{emt:figure:interface-internal}).
 
 \item{\bf EMT is modularized and improves maintainability.}
 EMT provides well-defined translation semantics and organizes them with an object-oriented design.
 %	(in a similar vein to VFS~\cite{linux:vfs}).
-The interface eliminates architecture-specific or overloaded semantics. % (\S\ref{sec:need:hardwire}).
+The interface eliminates architecture-specific or overloaded semantics. % (\S\ref{emt:sec:need:hardwire}).
 EMT also makes it easy to profile and analyze OS performance with regard to translation architectures.
 %	by capturing memory management operations related to translation.
 
@@ -73,7 +73,7 @@ EMT is
 % \jzx{extensively optimized}{
 	carefully implemented with
 %	\jzx{inline functions and macros, and has 
-%	negligible overhead (\S\ref{sec:eval:eval-EMT-radix-vs-vanilla}).}{
+%	negligible overhead (\S\ref{emt:sec:eval:eval-EMT-radix-vs-vanilla}).}{
 	compiler optimization, cache efficiency, and the ability to inline functions.
 EMT-Linux serves as a performance baseline for 
 	new architectures or OS modules.
@@ -97,11 +97,11 @@ EMT supports {\it all} Linux's memory management features related to CPU MMU % r
 %		VFS interface~\cite{linux:vfs}.} \branding decouples the
 %		architecture-neutral layer from hardware whereas it is coupled
 %		in vanilla Linux.}
-%		\label{figure:interface-overview}
+%		\label{emt:figure:interface-overview}
 \caption{\bf Overview of the EMT framework, compared with vanilla Linux
 	and analogized to VFS.}
 	% \jyk{I modified some names. Is there anthing else you want to change?}}
-	\label{fig:emt-overview}
+	\label{emt:fig:emt-overview}
 \end{figure}
 
 \subsubsection{EMT API}
@@ -140,7 +140,7 @@ To support a new translation scheme on EMT-Linux,
 A key design principle of
 	the EMT API is to abstract the {\it functions} of translation
 	for OS memory management from hardware-defined {\it shapes}.
-Despite many different translation architectures (\S\ref{sec:background}),
+Despite many different translation architectures (\S\ref{emt:sec:background}),
 	the essential function of memory translation is to output the virtual-to-physical
 	address mapping and all associated metadata, which is abstracted 
 	as a {\it translation object} in EMT.
@@ -151,7 +151,7 @@ How to encode translation information
 	of hardware-defined shapes into the EMT API is the job of MMU drivers.
 % This API design fundamentally differs from existing Linux 
 %	routines hardwired 
-%	to the \textit{shape} of translation data (\S\ref{sec:need}).
+%	to the \textit{shape} of translation data (\S\ref{emt:sec:need}).
 
 % the translation entry or the granularity of the mapping 
 %	(e.g., for different page sizes).
@@ -162,11 +162,11 @@ How to encode translation information
 %	% the minimal set of abstractions that are not specific to any 
 %	different translation architectures,
 %	and are sufficient to express all the historical, current,
-%	and recently proposed translation architectures (\S\ref{sec:design:generality}).
+%	and recently proposed translation architectures (\S\ref{emt:sec:design:generality}).
 The EMT API is organized as 
 	1) {\it basic functions} that must be implemented by each MMU driver
 	for its supporting translation architecture,
-% to allow the system to function properly (Figure~\ref{fig:emt-overview}).
+% to allow the system to function properly (Figure~\ref{emt:fig:emt-overview}).
 	and 2) {\it customizable functions} that have a default implementation
 	that is architecture-independent; the default implementation 
 	only uses basic functions and other common code. % is architecture-neutral.
@@ -189,7 +189,7 @@ Basic functions free developers from sophisticated optimizations
 %	\item {\bf basic functions} are kernel routines
 %	that must be implemented
 %		for each supported translation architecture in the architecture-dependent 
-%		code to allow the system to function properly (Figure~\ref{fig:emt-overview}).
+%		code to allow the system to function properly (Figure~\ref{emt:fig:emt-overview}).
 %		In other words, they represent the minimal effort to implement 
 %		in order to support a new translation architecture.
 %	\item {\bf customizable functions} are kernel routines that have default implementation
@@ -199,7 +199,7 @@ Basic functions free developers from sophisticated optimizations
 %		\TODO{Specifically, we identify \TODO{XXX} abstractions 
 %			such as locks, iterators, and \TODO{XXX}
 %			whose customization often leads to major performance improvements}.
-%		We show in \S\ref{sec:todo} that customizing some of them leads to 
+%		We show in \S\ref{emt:sec:todo} that customizing some of them leads to 
 %		significant performance benefits.
 % \end{packed_itemize}
 
@@ -248,7 +248,7 @@ Basic functions free developers from sophisticated optimizations
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % \paragraph{Design Principle}
-% \label{sec:design:principle}
+% \label{emt:sec:design:principle}
 
 % \jz{
 % How page table works
@@ -299,7 +299,7 @@ Basic functions free developers from sophisticated optimizations
 % }
 
 \paragraph{Basic Functions}
-\label{sec:design:basic}
+\label{emt:sec:design:basic}
 
 % Given a virtual address, a translation system
 %	should always return an effective translation object, as the outcome of the translation.
@@ -330,7 +330,7 @@ Basic functions free developers from sophisticated optimizations
 \end{minted}
 \caption{{\bf Examples of basic functions in the EMT API.} 
 	EMT exposes 15 basic functions in total.}
-\label{fig:api}
+\label{emt:fig:api}
 \end{figure}
 
 \noindent
@@ -347,16 +347,16 @@ Basic functions
 %	for multi-process systems like Linux, with CRUD-style APIs. 
 % Lastly, we model a translation entry as a key-value map, 
 %	where the key is an attribute name and the value is the attribute.}
-Figure~\ref{fig:api} gives examples of basic function APIs.
+Figure~\ref{emt:fig:api} gives examples of basic function APIs.
 % Since translation entries can contain different attributes,
 %	they can be queried using attribute names as primary keys.
 The API design avoids 
 	assuming specific hardware schemes like the five-level radix tree
-	(\S\ref{sec:background}) or page table entry schema.
-It also prevents overloaded semantics like \texttt{\small pmd\_none\_or\_clear\_bad} (Figure~\ref{fig:need:linux-no-interface})
+	(\S\ref{emt:sec:background}) or page table entry schema.
+It also prevents overloaded semantics like \texttt{\small pmd\_none\_or\_clear\_bad} (Figure~\ref{emt:fig:need:linux-no-interface})
 	due to software evolution.
 % Linux's memory management routines can be refactored
-%	and ported to EMT (\S\ref{sec:impl}).
+%	and ported to EMT (\S\ref{emt:sec:impl}).
 
 %These EMT routines are fundamentally different from the 
 %	BSD/Mach's pmap interface~\cite{freebsd,cranor99uvm,rashid1987machine}:
@@ -383,9 +383,9 @@ It also prevents overloaded semantics like \texttt{\small pmd\_none\_or\_clear\_
 % We introduce three new abstractions, {\it page table}, {\it page table entry},
 % and {\it memory translation hardware} and categorize functions of \essgrps into three groups
 % based on which abstraction they are related to. 
-% The first group manipulates the structure of the page table (\S\ref{sss:fg_1}). 
-% The second group reads and writes the content of PTE (\S\ref{sss:fg_2}). 
-% The last group controls the hardware configuration (\S\ref{sss:fg_3}).
+% The first group manipulates the structure of the page table (\S\ref{emt:sss:fg_1}). 
+% The second group reads and writes the content of PTE (\S\ref{emt:sss:fg_2}). 
+% The last group controls the hardware configuration (\S\ref{emt:sss:fg_3}).
 
 % \jyk{What about explaining the following subsections in the top-down way. I.e., Context -> DB -> Entry. The current order is neither top-down nor bottom-up. Bottom-up seems also good but we are mentioning Trans.DB in 4.2.2.}
 
@@ -399,14 +399,14 @@ It also prevents overloaded semantics like \texttt{\small pmd\_none\_or\_clear\_
 % \interface introduces new abstractions and defines functions that operate on them.
 
 \para{Translation Object.}
-\label{sss:fg_2}
+\label{emt:sss:fg_2}
 A translation object encodes a virtual-to-physical address mapping 
-	and all its associated metadata. %}{effective translation entry (\S\ref{sec:design:principle})}. %\jyk{Corresponds to the PTE of x86.}
+	and all its associated metadata. %}{effective translation entry (\S\ref{emt:sec:design:principle})}. %\jyk{Corresponds to the PTE of x86.}
 For paged architectures, it encodes translation information stored 
 	in page table entries.
 For tree-based architectures, a translation object encodes information
 	in page table entries that point to the physical page
-	(see \S\ref{sec:impl}).
+	(see \S\ref{emt:sec:impl}).
 A translation object 
 	can also represent segments
 	or variable-length memory regions.
@@ -428,7 +428,7 @@ MMU drivers can also encode architecture-specific attributes
 
 
 \para{Translation Database.}
-\label{sss:fg_1}
+\label{emt:sss:fg_1}
 Translation objects of an address space are stored in a conceptual database.
 % The object is viewed 
 %	as an abstract database of translation entries of a task's address space.
@@ -436,13 +436,13 @@ The database is commonly implemented by
 	a page table (which can be of various shapes) in an MMU driver.
 It can also be implemented by multiple co-existing page tables 
 	(e.g., ECPT needs separate page tables for each userspace process 
-	and for a shared kernel space across processes; see \S\ref{sec:ecpt_impl}),
+	and for a shared kernel space across processes; see \S\ref{emt:sec:ecpt_impl}),
 	or by segments or VMA registers~\cite{kanellopoulos2023utopia,self:dmt}.
 EMT requires a translation database to return one and only one translation object for a virtual address,
 	as the function of the database.
 EMT	does not concern the shape of the database.
 Its basic functions % are routines that change the translation structure,
-	% as shown in Table~\ref{table:api}.
+	% as shown in Table~\ref{emt:table:api}.
 % These routines 
 abstract away architecture-specific structures.
 %	MMU drivers need to implement transparent resizing of internal data structures
@@ -460,7 +460,7 @@ The benefit is modularity, making it easy to
 
 
 \para{Translation Service.}
-\label{sss:fg_3}
+\label{emt:sss:fg_3}
 % The object is for managing address spaces and page tables.
 % Modern OSes manage multiple translation contexts concurrently.
 A translation service abstracts the MMU of a system.
@@ -475,7 +475,7 @@ It is the root of the EMT API, and manages the creation,
 Upon a context switch, the translation service is called to switch 
 	the databases.
 % \JZx{For example, ECPT needs page tables for each userspace process 
-%	and a shared kernel space across processes (\S\ref{sec:ecpt_impl}).}
+%	and a shared kernel space across processes (\S\ref{emt:sec:ecpt_impl}).}
 Translation service decouples translation management 
 	from task management.
 
@@ -520,7 +520,7 @@ Translation service decouples translation management
 % It considers initial creation and final destruction of page tables,
 % locating, inserting, and updating page table entries,
 % and on-demand growth and shrinkage of page tables.
-% Table \ref{table:pts-fg} lists the member functions of \ptsfg.
+% Table \ref{emt:table:pts-fg} lists the member functions of \ptsfg.
 % Considering the functionality of page tables,
 % We simplify the interface by abstracting away the page table life cycle management within \ptsfg.
 % That is, the \ptsfg implementation 
@@ -541,7 +541,7 @@ Translation service decouples translation management
 % Unlike the \ptsfg which treats a PTE
 % and its content as a black box, the \ptefg interprets the meaning
 % of internal attributes of a PTE. 
-% Table \ref{table:pte-fg} shows the list of
+% Table \ref{emt:table:pte-fg} shows the list of
 % interfaces in the \ptefg. The interfaces can construct new PTEs and extract or change
 % mapped physical addresses and PTE attributes.
 
@@ -564,7 +564,7 @@ Translation service decouples translation management
 
 \begin{comment}
 \paragraph{Translation hardware}
-\label{sss:fg_3}
+\label{emt:sss:fg_3}
 The object is for managing memory translation hardware states.
 For example, it manages control registers (e.g., CR3 in x86-64)
 	and translation-related hardware attributes (e.g., whether 5-level paging is enabled in x86-64).
@@ -584,7 +584,7 @@ The routines in this group correspond to
 % translation implementations in the HWO-FG.
 
 \paragraph{Customizable Functions}
-\label{sec:design:opt}
+\label{emt:sec:design:opt}
 
 % 1) We provide an immutable list of \essgrps, saying that this list is the pillar that should not be changed easily.
 % 2) We show that we can do the entire MM based on existing groups, hence the immutable list is indeed all-capable.
@@ -622,7 +622,7 @@ The routines in this group correspond to
 	\schai{35} customizable functions in total in 7 groups.
 % \schaic{Add function for TLB batch invalidation after discussing with JZ}
 }
-\label{fig:api-cus}
+\label{emt:fig:api-cus}
 \end{figure}
 
 \noindent
@@ -631,7 +631,7 @@ Customizable functions provide an interface for MMU drivers to implement
 Each customizable function has a default architecture-neutral implementation
 %	but can be customized by MMU drivers for architecture-specific optimizations.
 	using basic functions and other architecture-independent code.
-Figure~\ref{fig:api-cus} gives examples of customizable function APIs.
+Figure~\ref{emt:fig:api-cus} gives examples of customizable function APIs.
 % The default implementation may not have optimal performance.
 %	but, their functional correctness is ensured.
 % The design enables optimizations without the need to change architecture-independent code.
@@ -649,7 +649,7 @@ Since customizable functions always have an architecture-neutral implementation,
 In principle, customizable functions are those that can benefit from architecture-specific optimizations. 
 The choice now is through high-level reasoning together with profiling that identifies performance-critical code.
 Currently, EMT exposes different groups of customizable functions,
-	as exemplified by Figure~\ref{fig:api-cus}.
+	as exemplified by Figure~\ref{emt:fig:api-cus}.
 We discuss the iterator group as an example.
 
 % EMT enables Linux to support
@@ -674,7 +674,7 @@ int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 \end{minted}
 \captionsetup{justification=centering}
 \caption{Default (architecture neutral)}
-\label{code:iternext-gen}
+\label{emt:code:iternext-gen}
 \end{subfigure}
 \begin{subfigure}[b]{.5\textwidth}
 \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
@@ -696,11 +696,11 @@ int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 \end{minted}
 \captionsetup{justification=centering}
 \caption{x86-64 radix MMU driver} %\JZc{@siyuan: can you adopt the implementation I put in interface doc?}}
-\label{code:iternext-x86}
+\label{emt:code:iternext-x86}
 \end{subfigure}
 
 \caption{\bf A customizable function of the iterator.}
-\label{code:iternext}
+\label{emt:code:iternext}
 \end{figure}
 
 \para{Translation-Object Iterator.}
@@ -709,20 +709,20 @@ Iterating over a large number of translation objects % of a large address range
 	(e.g., for page migration~\cite{linux:migration} and huge-page promotion~\cite{linux:thp}).
 The performance of such operations is critical, e.g., 
 	an optimized iterator
-	can reduce page fault handling cost by 52.5\% (\S\ref{ss:perf-ecpt}).
+	can reduce page fault handling cost by 52.5\% (\S\ref{emt:ss:perf-ecpt}).
 %	{total kernel work by 49.0\%}{"PF work" is confusing even for me}
 EMT provides a translation-object iterator with customizable functions.
-Figure~\ref{code:iternext-gen} shows the default implementation of the iterator's \texttt{\small tobj\_iter\_next()} 
+Figure~\ref{emt:code:iternext-gen} shows the default implementation of the iterator's \texttt{\small tobj\_iter\_next()} 
 	function, which is not efficient---the
 	OS needs to walk from the root to the leaves of the page-table tree 
 	in every iteration using \texttt{\small tdb\_find\_tobj}.
 Note that such OS walks cannot benefit from hardware caches like PWCs as they are done by software.
 %	and thus does not benefit from 
 %	hardware caches like PWCs.
-Figure~\ref{code:iternext-x86} shows the customized implementation of the x86-64 MMU driver
+Figure~\ref{emt:code:iternext-x86} shows the customized implementation of the x86-64 MMU driver
 	that leverages
 	spatial locality of the radix tree to directly increment the pointer to get the next object.
-We discuss the implementation of the ECPT MMU driver in \S\ref{ss:ecpt-mmu-driver}.
+We discuss the implementation of the ECPT MMU driver in \S\ref{emt:ss:ecpt-mmu-driver}.
 
 EMT's iterator functions differ from Linux's page-table iterator~\cite{linux:pt-iter}---it does not assume the radix tree structure.
 EMT's iterator does not return intermediate entries (which are specific to tree schemes),
@@ -822,7 +822,7 @@ The MMU drivers of radix tree and ECPT customize the default implementation diff
 	than \texttt{\small \_\_transparent\_hugepage\_enabled()}.
 % ---the former checks one PMD entry while the latter checks multiple VMA attributes;
 	In contrast, ECPT has more expensive
-	range operations like \texttt{\small aspace\_void()}, discussed in \S\ref{sec:reflection:sparse}
+	range operations like \texttt{\small aspace\_void()}, discussed in \S\ref{emt:sec:reflection:sparse}
 	and thus the order of checks is opposite to x86-64's radix-tree-based design.
 %	are much more expensive in ECPT. \TODO{Therefore,
 % the ECPT MMU driver changes the order of the two checks to quickly return the
@@ -862,18 +862,18 @@ The MMU drivers of radix tree and ECPT customize the default implementation diff
 		valid page allocated, is often a cheaper check 
 	than calling Linux's VMA setting checker \texttt{\small \_\_transparent\_hugepage\_enabled()}.
 In contrast, ECPT has more expensive
-	range operations as a scan in the hash table is required, discussed in \S\ref{sec:reflection:sparse}
+	range operations as a scan in the hash table is required, discussed in \S\ref{emt:sec:reflection:sparse}
 	and thus the order of checks is opposite to x86-64's radix-tree-based design.
 Our evaluation shows that such optimization can reduce the total kernel work by xxx\%. \JZc{@siyuan}
 }
 
 % Extensible operations can be used not only to build optimizations but also to avoid design weaknesses.
-% For ECPT, software page table access is expensive even after an optimized iterator is implemented (\S\ref{ss:perf-ecpt}).
+% For ECPT, software page table access is expensive even after an optimized iterator is implemented (\S\ref{emt:ss:perf-ecpt}).
 % For this reason, MMU drivers for ECPT should avoid iteration operations as much as possible.
 % Unfortunately, due to the existence of the transparent huge page (THP) mechanism,
 %	the current page fault handler must check if a range is faultable as a THP before proceeding to base page faults.
 % However, this process involves a page table check to see if the huge page range is occupied,
-%	and a system setting check to see if THP is currently enabled (Figure \ref{code:thplinux}).
+%	and a system setting check to see if THP is currently enabled (Figure \ref{emt:code:thplinux}).
 % The two checks may show different relative expenses for different architectures.
 
 % Since EMT automatically inherits the generic implementation to all MMU drivers,
@@ -883,25 +883,25 @@ Our evaluation shows that such optimization can reduce the total kernel work by 
 
 % \However, this generic operation performs a page walk for each iteration step.
 % This may be undesirable for architectures like x86-64 which has a good locality in PTE layout.
-% To exploit such locality, the x86-64 MMU driver may add the deltas shown in Figure \ref{code:iterx86}
+% To exploit such locality, the x86-64 MMU driver may add the deltas shown in Figure \ref{emt:code:iterx86}
 %	to achieve near-Linux performance without sacrificing generalizability.
 
 % To maximize the performance of ECPT,
 %	the MMU driver author may propose a new extensible operation for huge page eligibility checks.
 % This way, the ECPT can perform the relatively cheap system setting check first
 %	and avoid the expensive range check when unnecessary.
-% The implementation of the generic and ECPT-specific version is shown in Figure \ref{code:thpgen}.
+% The implementation of the generic and ECPT-specific version is shown in Figure \ref{emt:code:thpgen}.
 
 % \caption{Simplified code on the revised page fault handler and corresponding
 % operation implementations.\jyk{Unify the code structure.}}
-% \label{code:thpgen}
+% \label{emt:code:thpgen}
 % \end{figure}
 \para{Lock.}
 Different architectures support locks with different costs.
 % }{Due to the difference in memory layout of translation entries, OSes may perform fine-grained locking instead of full table locking.}{Lock is an OS operation}
 For example, x86-64 enables locks on a page-table page in the radix tree~\cite{linux:sptl};
 %	a large address range;
-	ECPT can potentially enable locks on an entry cluster, a way, or a table (\S\ref{sec:multithreading}).
+	ECPT can potentially enable locks on an entry cluster, a way, or a table (\S\ref{emt:sec:multithreading}).
 % Due to their designs, some page tables allow PTE locking operations to be performed at a granularity less than a whole table.
 % This allows multiple non-overlapping page table operations to be performed on the same table concurrently.
 EMT exposes a group of customizable functions for locks on any address ranges. % with flexibility in granularity.
@@ -950,12 +950,12 @@ The MMU drivers can customize the implementation with fine-grained locks.
 % \captionsetup{justification=centering}
 % \vspace{-5pt}
 % \caption{ECPT MMU driver}
-% \label{code:thpgen:ecpt}
+% \label{emt:code:thpgen:ecpt}
 % \end{subfigure}
 % \vspace{-20pt}
 % \caption{\bf A customized function of the memory area.}
 % \vspace{-5pt}
-% \label{code:thpgen}
+% \label{emt:code:thpgen}
 % \end{figure}
 
 %	to achieve a near-Linux performance, while for ECPT MMU driver, we use a per-way lock strategy to maximize concurrency.}
@@ -985,7 +985,7 @@ The MMU drivers can customize the implementation with fine-grained locks.
 %
 %		\itblitem{struct page\_table\_iterator}{Represents an ongoing iterator that works on specific virtual address ranges.}
 	\end{tabularx}
-	\label{tab:impl:iter}
+	\label{emt:tab:impl:iter}
 \end{table}
 \end{comment}
 
@@ -1058,7 +1058,7 @@ Linux code for IOMMU translation is also hardwired to the radix-tree scheme;
 \schai{EMT assumes that programs run with virtual addresses; EMT currently does not support
     designs that make program use physical addresses directly~\cite{suchy2022caratcake,suchy2020carat}. }
 	
-% However, in ECPT, this is not the case as some bits are always meaningful regardless of the P bit (Figure \ref{fig:ecpt-impl:ecpt-cluster}).
+% However, in ECPT, this is not the case as some bits are always meaningful regardless of the P bit (Figure \ref{emt:fig:ecpt-impl:ecpt-cluster}).
 % The introduction of swap customizable functions enables ECPT and other architectures with a similar caveat to store the swap information partially in dedicated locations
 %   to keep the Linux swap functionality intact.
 \schai{EMT currently only supports the native environment; 
@@ -1107,9 +1107,9 @@ One way is to add hints in the map interface~\cite{gingell1987sunos,rashid1987ma
 To offer a generic memory translation interface,
 	we designed and implemented EMT in an object-oriented approach.
 We describe how to instantiate tree-based memory translation
-	using radix tree as an example (see~\S\ref{xxx})
+	using radix tree as an example (see~\S\ref{emt:xxx})
 	and hashing-based memory translation using ECPT~\cite{skarlatos2020ecpt}
-	as an example (see~\S\ref{xxx}).
+	as an example (see~\S\ref{emt:xxx}).
 To further show EMT's generality, we introduce how EMT can be used to
 	instantiate other memory translation designs that are different
 	from tree-based or hashing-based memory translation.

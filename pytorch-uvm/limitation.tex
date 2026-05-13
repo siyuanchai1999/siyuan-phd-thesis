@@ -1,0 +1,66 @@
+\section{Discussion and Limitations}
+
+\paragraphb{Driver modifications.}
+\brand requires modifying IO device drivers to use the new callback-based \CodeIn{unmap()} interface,
+    which defers free-page operations to the IOMMU subsystem
+    instead of freeing pages immediately after unmap.
+In our implementation, adapting the mlx5 driver required ${\sim}350$ lines of changes,
+    comparable to the driver modifications in prior work such as F\&S~\cite{Rubin2024FastSafe}.
+% The changes are primarily mechanical:
+%     replacing direct page-free calls with callback registration at unmap time.
+However, each new driver wishing to benefit from \brand must be similarly adapted.
+\optOne{} can be used without driver modifications; all existing driver will enjoy the benefits.
+% We expect that a generic helper in the DMA mapping layer could reduce per-driver effort in the future.
+
+\paragraphb{Reduced benefits at low core counts.}
+\brand's one-for-many invalidations benefit from concurrent producers generating
+    multiple IR-PREPs during each IR-SUB operation.
+With fewer cores, IR group sizes shrink and the batching advantage diminishes.
+Moreover, the pinned consumer strategy dedicates one core to IR-SUB,
+    which represents a proportionally larger resource cost at low core counts.
+For example, our largest gap to vIOMMU-off (8.4\%) occurs at 12 cores in the Tx-server setup.
+At this core count, deferred free page dispatches releases pages in bursts
+    on all producer cores at once,
+    causing producer cores to contend on the buddy allocator's zone lock.
+This contention slows down page reclamation and can lead to socket-buffer stalling (\S\ref{ssec:dfp}).
+At higher core counts (20 and 24), there are enough producers to absorb this overhead.
+We believe this gap can be further narrowed by leveraging the buddy allocator's
+    existing bulk-free interfaces to amortize lock acquisition across multiple pages.
+
+\paragraphb{Application to shadow page table-based vIOMMU}
+\uvmname{} focuses on nested translation IOMMU;
+however, its techniques can benefit shadow page table-based vIOMMU as well.
+More specifically, shadow page table-based vIOMMU requires VM exits at IOMMU cache invalidation time at both map and unmap time
+to notify the hypervisor of page table changes.
+
+Our \optOne can be applied to both map and unmap time invalidations.
+Yet, though we can not batch multiple invalidation requests into a single IR-SUB operation,
+we can still do one IR-SUB but with multiple IR descriptors. This batching will reduce VM exits overhead.
+
+Deferred free page can only be applied to unmap time invalidations.
+At map time, we cannot proceed without invalidation completion because we need to 
+ensure shadow page table has been correctly updated;
+otherwise, handing a IOVA without shadow page tabl entry built to NIC will lead to DMA failure.
+
+
+\paragraphb{Relationship to lazy mode}
+Linux's lazy (deferred) mode also achieves performance benefits by batching invaladtion requests within a deferred time window.
+Linux's current lazy mode is vulnerable to both confidentiality and integrity attacks~\cite{AlexCodeInjection, RajapakshaIOMMU}.
+
+The technique of deferred free page can be applied to lazy mode to avoid the attacks.
+However, with a non trivial deferred time window (10 ms by default in Linux),
+    deferring free page operation may lead to much higher memory overhead in terms of active pages.
+The larger the deferred time window, the more more pages will need to be freed in burst--
+it will lead to huge CPU bottlenecks in the IOMMU subsystem, 
+and makes it prone to the socket buffer pool exhaustion problem discussed in \S\ref{ssec:dfp}.
+
+Note that our free page operations is only deferred for at most the duration of two rounds of IR-SUB operations (10 - 30 $\mu$s) in practice,
+only less than 1\% of the deferred time window.
+% From a security perspective, applying deferred free page to lazy mode still leave 
+    % creating a window in which stale IOMMU cache entries permit unauthorized DMA access.
+\schaic{I didn't make the claim on lazy+DFP has larger attack window for TOCTTOU attack.}
+
+% In contrast, \brand's deferred free page defers only the \emph{page reclamation},
+%     not the invalidation:
+%     the invalidation still occurs before the page is returned to the allocator,
+%     preserving the strict safety invariant.

@@ -1,0 +1,202 @@
+\subsubsection{Safety Analysis}
+\label{vfree:sec:security}
+% Modern operating systems typically offer two modes of IO memory protection. The most powerful guarantee is that of so-called strict mode~\cite{} 
+% % \brand maintains strict IO memory protection provided by 
+%     % Linux's strict mode~\cite{} 
+%     which enforces  
+%     the free-after-invalidation invariant to ensure % I assume it's the invariant was made early in the design
+%     \emph{no page can be freed with a stale entry 
+%         that permits access to the page in hardware caches (e.g., IOTLB)}.
+% This invariant is key to data integrity~\cite{AlexCodeInjection} and confidentiality~\cite{RajapakshaIOMMU}.
+% The other mode---referred to as the lazy or the deferred mode~\cite{}---provides weaker protection because it violates this invariant by
+%     deferring invalidation after the DMA 
+%     buffer is unmapped, creating a window of vulnerabilities to integrity and confidentiality attacks.
+
+%    the kernel initializes metadata structures (e.g., \texttt{skb\_shared\_info}) in the same buffer. 
+%        If the device retains write access during this initialization, 
+%        it can silently corrupt data structures that the CPU has already validated---a 
+%        classic .
+
+\if 0
+On the {\it receive path (Rx)},
+    the kernel must not inspect or initialize the buffer {\it before} revoking device access, 
+    and must not recycle the page until initialization is complete;
+otherwise, the device may concurrently modify the buffer (violating integrity), 
+or observe uninitialized data (violating confidentiality).
+On the {\it transmit (TX) path}, only confidentiality is at stake, not integrity
+    (the device reads from host memory but does not write back). 
+%The primary risk is that, after unmapping, a stale IOTLB entry allows the device to read data subsequently placed in the recycled physical page. 
+Accordingly, after DMA completion, the kernel must unmap the buffer
+    and invalidate any cached translations before the page is returned to the allocator,
+    avoiding stale IOTLB entries to be exposed to devices.
+This is the invariant that strict IOMMU mode enforces \rachit{technically speaking, strict IOMMU also enforces that unmap and invalidations are atomic}---and the invariant we must preserve.
+\fi 
+
+% \para{Threat Model}
+% \label{vfree:sec:threat-model}
+% % We consider a virtualized environment where a guest VM
+% %    is assigned one or more devices and interacts with 
+% %    an vIOMMU exposed by the hypervisor. 
+% % The vIOMMU provides the abstraction of hardware-enforced DMA isolation within the guest, 
+% %    while the underlying physical IOMMU enforces isolation across VMs.
+% We follow the threat model of strict protection mode of Linux IOMMU~\cite{}
+%     and in prior work~\cite{dawn,Amit2011vIOMMU,RajapakshaIOMMU}.
+% Our trusted computing base includes the guest OS (including the device driver), 
+%     the host OS, hypervisor including the vIOMMU subsystem, 
+%     and the underlying hardware (CPU, memory system, and physical IOMMU).
+% We assume that the guest OS correctly configures and manages DMA mappings
+%     and that the host OS and physical IOMMU faithfully enforces these mappings.
+% We consider attacks that control malicious or compromised devices within the VM.
+% Our focus is protection from unauthorized DMAs 
+%     which attempt to 
+%     access memory beyond regions assigned by the guest OS
+%     or reuse stale IOVAs after mappings were revoked.
+
+% Boot-time DMA attacks are assumed to be mitigated independently and 
+%     thus out of the scope of IOMMU protection~\cite{dawn}.
+% Data integrity attacks performed while the device \emph{legitimately} 
+%     holds a mapping (e.g., a malicious NIC modifying packet payload before the DMA is complete) 
+%     is equivalent to corruption on disk or a man-in-the-middle attack; 
+%     this is outside the IOMMU's scope of protection.
+% For sub-page vulnerabilities~\cite{}, we provide the same defense 
+%     as Linux's strict mode;
+% % \leshna{needs slight rephrasing, it reads like we claim linux strict doesn't handle it, we want to state we don't change how it is handles so we don't introduce any attack here}
+%     \brand neither introduces nor mitigates this class.
+
+
+% \if 0
+% \para{Relaxed Protection.} Linux provides a lazy mode which trades protection 
+%     for performance. The lazy mode defers IOTLB invalidation after the DMA 
+%     buffer is unmapped. This creates two distinct attack surfaces:
+%   \begin{itemize}[leftmargin=*]
+%     \item {\bf Data Integrity.} On the receive path, after a packet arrives via DMA, 
+%     the kernel initializes metadata structures (e.g., \texttt{skb\_shared\_info}) in the same buffer. 
+%         If the device retains write access during this initialization, 
+%         it can silently corrupt data structures that the CPU has already validated---a 
+%         classic time-of-check-to-time-of-use attack~\cite{AlexCodeInjection}.
+% %    The correct defense is to revoke device access \emph{before} the kernel begins any security-sensitive processing of the buffer. 
+% %    \rachit{or, immediately after the DMA completes?}
+%     \item {\bf Confidentiality.} 
+%         Once a page is freed, the Linux page allocator may immediately reuse it for sensitive data 
+%         or allocate it to another device. 
+%         If a stale IOTLB entry still maps that page, the original device can read the new contents. 
+%         Fast reuse is common because freed pages are likely to remain in the CPU cache 
+%         and are preferentially recycled~\cite{RajapakshaIOMMU}. 
+%         \rachit{Two points: (1) a reader may find this text a bit confusing because our data path never mentions the page allocation step; 
+%             (2) is the per-CPU page pool shared by multiple DMA-enabled devices? 
+%             if not, this will not happen on the Rx side because of the page pool---right? 
+%             (this can still happen on the Tx side). 
+%             If yes, we should perhaps mention that when we describe the page pool.}
+%   \end{itemize}
+% \fi
+
+% % On the \textbf{receive path}, both integrity and confidentiality must be preserved:
+% \if 0
+% \textbf{Correct (RX):} \\
+% \hspace*{1em} DMA done $\rightarrow$ Unmap $\rightarrow$ IOTLB invalidation \\
+% \hspace*{1em} $\rightarrow$ Kernel checks \& initialization $\rightarrow$ Page free/recycle\\
+% \fi 
+% % \textbf{Correct (RX):} DMA done $\rightarrow$\allowbreak Unmap $\rightarrow$\allowbreak IOTLB invalidation complete $\rightarrow$\allowbreak Kernel checks \& initialization $\rightarrow$\allowbreak Page free/recycle
+% % The kernel must not inspect or initialize the buffer until the device's access is revoked, and the page must not be returned to the allocator until initialization is complete.
+
+% \if 0
+% \textbf{Correct (TX):} \\
+% \hspace*{1em} DMA done $\rightarrow$ Unmap $\rightarrow$ IOTLB invalidation \\
+% \hspace*{1em} $\rightarrow$ Page free/recycle\\
+
+% \fi 
+
+% \if 0
+% \textbf{Buggy (RX):}\\
+% \hspace*{1em} DMA done $\rightarrow$ Kernel checks \& initialization $\rightarrow$\\ 
+% \hspace*{1em} Unmap $\rightarrow$ IOTLB invalidation $\rightarrow$ Page free/recycle\\
+
+% Under this ordering, the device retains write access during the kernel's checks, 
+% creating an integrity vulnerability regardless of IOMMU mode.
+% Strict mode does not protect against this bug, because the unmap has not yet been issued.
+% We note this ordering explicitly because our security analysis (\S\ref{vfree:sec:security}) 
+% shows that our optimizations do not \emph{widen} this pre-existing window.
+% \fi
+
+
+\para{Safety Guarantees}
+One-to-many invalidation preserves the safety invariant---each core still blocks until 
+    its own invalidation request (IR) completes before freeing the page.
+What changes is \emph{when} the invalidation descriptor is submitted to the IOMMU hardware, 
+    {\it not} the order between IR completion and page free.
+% Under vanilla strict mode, each core acquires the global lock, submits one invalidation descriptor, busy-waits for hardware acknowledgment, and only then proceeds to page free.
+% Under \optOne, the core still submits its invalidation descriptor and still waits for hardware acknowledgment before proceeding---the difference is that the lock is released after enqueue rather than after completion, allowing multiple cores to have invalidations in flight concurrently.
+The only relaxation is \emph{between} cores: one core's IR need not complete before another core enqueues its own.
+This cross-core concurrency does not weaken the safety invariant, 
+    which holds per-page: a page is freed only after the invalidation that covers it has completed.
+
+\if 0 % Sorry I don't think we need those -- I think we only need to articulate the invariant
+      % and argue that the invariant always hold
+\emph{Integrity (RX, correct driver ordering).}
+Under correct driver ordering, the kernel performs checks and initialization only after unmap and invalidation complete.
+\optOne preserves this: the CPU still blocks until its invalidation is acknowledged before returning to the driver.
+The integrity guarantee is identical to strict mode.
+
+\emph{Integrity (RX, buggy driver ordering).}
+When a driver performs checks before unmap, the device retains write access during those checks regardless of IOMMU mode.
+Under strict mode, the attack window spans from DMA completion to IOTLB invalidation completion; as shown in \S\ref{vfree:sec:inefficiencies}, this window grows rapidly under lock contention.
+With \optOne, the window is bounded to two invalidation round trips, which on average reduces the exposure.
+
+\emph{Confidentiality (RX and TX).}
+The free-after-invalidation ordering guarantees that no page is returned to the allocator while a stale IOTLB entry exists.
+Since \optOne preserves this per-core ordering, the confidentiality guarantee is identical to strict mode on both paths.
+\fi
+
+% \paragraphb{Deferred invalidation: Deferred Free Page (DFP).}
+DFP decouples the CPU from IR completion. Rather than blocking for hardware acknowledgment, 
+    the CPU enqueues the IR and registers the page-free operation 
+    as a callback that fires only when the IOMMU confirms completion.
+The CPU is free to return to the driver immediately after enqueue.
+The safety invariant is preserved by construction: 
+    the callback mechanism guarantees that the page is not returned to the allocator 
+    until the hardware has confirmed the invalidation.
+
+
+\if 0 % Sorry I don't think we need those -- I think we only need to articulate the invariant
+      % and argue that the invariant always hold
+\emph{Integrity (RX, correct driver ordering).}
+Under correct driver ordering, the kernel defers checks and initialization until after IOTLB invalidation.
+With DFP, these checks are also executed inside the callback, preserving the same ordering as strict mode.
+
+\emph{Integrity (RX, buggy driver ordering).}
+When a driver performs checks before unmap, the exposure is the same as discussed for \optOne.
+However, DFP introduces an additional consideration.
+If the driver does not defer its checks to the callback, a new window opens because the CPU returns from unmap before invalidation completes, meaning the kernel may begin processing the buffer while the device still holds a stale IOTLB entry.
+
+For modern page-pool-based drivers, this distinction is moot: pages are persistently mapped for the lifetime of the pool regardless of IOMMU mode, and integrity depends on driver discipline in copying kernel-inspected structures to non-DMAable buffers, not on invalidation timing.
+For non-page-pool drivers, DFP may create a brief integrity window between unmap and invalidation completion that does not exist under strict mode; however, this window is bounded by two invalidation trip latencies.
+
+\emph{Confidentiality (RX and TX).}
+The free-after-invalidation invariant is preserved by construction: the callback mechanism guarantees that the page is not returned to the allocator until after the hardware has confirmed the IOTLB invalidation
+This is confidentiality-equivalent to strict mode.
+\fi
+
+%     \item \textbf{Data integrity}. Under async + blocking, the core does not proceed until invalidation is confirmed, preserving the same ordering guarantee as strict mode. Under async + DPF, the CPU may perform security checks while invalidation is still pending, creating a TOCTTOU window for non-page-pool drivers absent under strict mode. For page pool drivers this is not a regression, as pages are persistently mapped regardless of invalidation policy. Where a driver bug causes checks to precede unmap, a malicious device can attack under strict mode as well; deferred invalidation increases the window but does not introduce a new vulnerability class.
+% \todo{FIX THIS WITH THE AVERAGE TIME AND WINDOW, THINK ABOUT THIS VERY VERY CAREFULLY}
+% \item \textbf{Confidentiality}. Under async + blocking, the ordering guarantee ensures pages are not recycled before invalidation completes, maintaining strict-mode confidentiality. Under async + DPF, page recycling is explicitly deferred until the IOTLB flush completes, closing the reuse window. Both configurations are therefore confidentiality-equivalent to strict mode.
+% \end{itemize}
+
+% \tianyin{I don't understand the buggy driver argument. Happy to discuss}
+
+\if 0
+\para{Buggy drivers.}
+
+\para{Buggy drivers.}
+A buggy device driver may violate the invariant by performing kernel checks 
+    on a received buffer \emph{before} revoking device access. 
+In this case, the kernel inspects and initializes the buffer prior to unmapping it, 
+    and only later invalidates corresponding IOTLB entries and recycles the page.
+Under this ordering, the device retains write access while the kernel processes the buffer, 
+    creating a window of integrity violations. 
+Notably, this vulnerability exists independently of the IOMMU protection: 
+    even in strict mode, protection is not enforced until the unmap operation is issued. 
+We highlight this ordering explicitly because our security analysis (\S\ref{vfree:sec:security}) 
+    shows that \brand{} do not expand this pre-existing vulnerability window.
+\tianyin{This is rather tricky -- do we have reference on this problem?
+    shall we assume drivers are trusted to have a clean threat model?}
+\fi 

@@ -1,0 +1,28 @@
+\begin{abstract}
+LLM inference is increasingly bottlenecked by GPU memory:
+    model sizes grow faster than device capacity,
+    forcing each framework to implement its own complex, application-specific offloading.
+CUDA Unified Virtual Memory (UVM) offers a transparent alternative,
+    but is considered too slow for production---prior work reports
+    over $5\times$ slowdowns relative to manual offloading.
+
+We present {\uvmname}, an application-aware UVM substrate for PyTorch
+    that closes this gap without changing model code.
+{\uvmname} contributes (1) a \emph{UVM-aware caching allocator}
+    that proactively returns cached memory to the driver under oversubscription,
+    avoiding the OOM kills that naive UVM caching suffers,
+    and (2) \emph{discard-based eviction},
+    which marks cached blocks as reclaimable without copying data back to host.
+For workloads where the active working set substantially exceeds GPU memory,
+    we further study \emph{direct CPU-memory access} and
+    \emph{access-counter--based migration} to mitigate page-fault thrashing.
+
+We evaluate on Hugging~Face OPT and Qwen inference workloads
+    across A100-PCIe, H100-PCIe, and GH200 NVLink-C2C.
+When memory is not oversubscribed, {\uvmname} matches PyTorch's native
+    \texttt{cudaMalloc}-based allocator within $20\%$.
+Under oversubscription, where the native allocator crashes with OOM,
+    {\uvmname} is $45\times$--$58\times$ faster than default UVM
+    and $27\times$--$35\times$ faster than HF KV-cache offloading.
+At high oversubscription, performance narrows to $1.6\times$--$1.7\times$ over default UVM.
+\end{abstract}

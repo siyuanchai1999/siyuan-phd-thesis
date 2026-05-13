@@ -1,5 +1,5 @@
 \subsection{Experience and Lessons Learned}
-\label{sec:lessons}
+\label{emt:sec:lessons}
 
 \noindent
 Developing EMT-Linux and the MMU drivers together with 
@@ -23,13 +23,13 @@ For features that need both hardware and software support,
     and mostly reads translation data.
 
 We continuously test and evaluate our system, not only 
-    for correctness (\S\ref{ss:correctness}) but also for performance.
-% For example, % when refactoring Linux to EMT-Linux (\S\ref{sec:impl}),
+    for correctness (\S\ref{emt:ss:correctness}) but also for performance.
+% For example, % when refactoring Linux to EMT-Linux (\S\ref{emt:sec:impl}),
 Continuous profiling helped us quickly observe performance regression over vanilla Linux;
     when developing ECPT, profiling helped us identify major inefficiencies compared 
     to the radix-page-table-based system. 
 We developed the instruction analysis 
-    with flame graphs~\cite{tool:flamegraph} in our emulator toolchain. % (\S\ref{sec:eval:emulator}) 
+    with flame graphs~\cite{tool:flamegraph} in our emulator toolchain. % (\S\ref{emt:sec:eval:emulator}) 
     and use them extensively. % during the development of the ECPT MMU driver.
 We also added GDB support for the ECPT-based system
 % \schai{ to accelerate debugging with its functionalities like breakpoint, tracing, and watchpoint. 

@@ -1,8 +1,8 @@
 \subsection{Evaluation}
-\label{sec:eval}
+\label{emt:sec:eval}
 
 \subsubsection{Methodology}
-\label{sec:eval:metho}
+\label{emt:sec:eval:metho}
 
 \noindent
 We validate the correctness of the EMT-Linux implementation
@@ -14,12 +14,12 @@ Since EMT supports all virtual memory features in Linux,
 
 We also measure the interface overhead of EMT by running 
 	the same set of performance benchmarks on
-	EMT-Linux (\S\ref{sec:impl}) and 
+	EMT-Linux (\S\ref{emt:sec:impl}) and 
 	vanilla Linux running upon the same hardware.
 
 We then measure the performance of EMT-Linux on ECPT. 
 We run EMT-Linux with the ECPT MMU driver on top of an emulated ECPT MMU 
-	using our emulation framework (\S\ref{sec:eval:emulator}).
+	using our emulation framework (\S\ref{emt:sec:eval:emulator}).
 We compare the performance of EMT-Linux with the Radix MMU driver
 	running on an emulated x86-64 MMU.
 
@@ -29,7 +29,7 @@ We compare the performance of EMT-Linux with the Radix MMU driver
 %	which is used by a few prior work~\cite{,}.
 %We find it a common dilemma of new architecture research.
 %Existing full-system simulations~\cite{} focus on hardware.
-%To address this dilemma, we assemble an emulation framework (\S\ref{sec:eval:emulator})
+%To address this dilemma, we assemble an emulation framework (\S\ref{emt:sec:eval:emulator})
 %	runs EMT-Linux on QEMU~\cite{qemu} 
 %	with a software MMU where we implemented hardware logic of ECPT.
 % The emulation framework allows hardware-software codesign and enables us to 
@@ -87,7 +87,7 @@ the performance of core OS operations such
 % 		& 27 scale, 32 edge factor, 4 iterations \\
 % 	\hline
 % 	\end{tabular}
-% 	\label{table:workloads}
+% 	\label{emt:table:workloads}
 % \end{table}
 
 We use nine memory-intensive macro benchmarks
@@ -109,7 +109,7 @@ We also run the GUPS benchmark~\cite{bench:gups} which issues random memory upda
 
 We also evaluate three memory-intensive applications:
 	Redis, Memcached, and PostgreSQL.
-Table~\ref{table:workloads} shows the workloads.
+Table~\ref{emt:table:workloads} shows the workloads.
 All these applications are multithreaded programs.
 % Several benchmarks are multithreaded, including fork, tr.create, etc 
 %	in LEBench as well as Redis, Memcached, and Postgres.
@@ -124,7 +124,7 @@ All these applications are multithreaded programs.
 % } % END TODO
 
 \subsubsection{Functional Correctness}
-\label{ss:correctness}
+\label{emt:ss:correctness}
 
 \noindent
 We show that EMT supports all memory management features of Linux
@@ -209,7 +209,7 @@ We use testing as a continuous effort throughout our development,
 	% special QEMU ECPT vm.
 
 \subsubsection{EMT Interface Overhead}
-\label{sec:eval:eval-EMT-radix-vs-vanilla}
+\label{emt:sec:eval:eval-EMT-radix-vs-vanilla}
 
 \noindent
 EMT introduces negligible overhead.
@@ -222,7 +222,7 @@ The overhead of EMT is calculated
 We experimented with various kernel configurations (e.g., enabling THP); the 
 	results are consistent.
 
-Figure~\ref{fig:eval:microbenchmark} shows the results of \schai{kernel micro benchmarks} LEBench~\cite{bench:lebench}.
+Figure~\ref{emt:fig:eval:microbenchmark} shows the results of \schai{kernel micro benchmarks} LEBench~\cite{bench:lebench}.
 % \schaix{EMT-Linux shows negligible overhead over vanilla Linux.}	
 \schai{EMT-Linux exhibits an average normalized kernel-routine performance of 99.9\% 
 	relative to vanilla Linux (with a standard deviation of 1.1\%) across the 41 LEBench microbenchmarks.}
@@ -239,7 +239,7 @@ Figure~\ref{fig:eval:microbenchmark} shows the results of \schai{kernel micro be
 	due to %\jzx{dependencies}{
 	coding style restriction, %~\cite{linux:code:icache}},
 	which can be further optimized by restructuring the code or forcing inlining.
-% \begin{figure*}[t]
+% \begin{figure}[t]
 % 	\centering
 % 	%\vspace{-12.5pt}
 % 	\includegraphics[width=0.7\textwidth]{data/radix_lebench.pdf}
@@ -247,12 +247,12 @@ Figure~\ref{fig:eval:microbenchmark} shows the results of \schai{kernel micro be
 % 	\jyk{Replace Vanilla Linux bars
 % 	with a line. It saves space.}}
 % 	%\vspace{-15pt}
-% 	\label{figure:eval:eval-stack-lebench}
-% \end{figure*}
-Figure~\ref{fig:eval:macrobenchmark} shows that
+% 	\label{emt:figure:eval:eval-stack-lebench}
+% \end{figure}
+Figure~\ref{emt:fig:eval:macrobenchmark} shows that
 	the overhead of EMT-Linux is less than 0.1\% on the macro benchmarks.
-Figure~\ref{fig:eval:eval-radix-real-app} shows the normalized throughput,
-	average latency, and tail latency of three real-world applications (with workloads in Table~\ref{table:workloads}) on 
+Figure~\ref{emt:fig:eval:eval-radix-real-app} shows the normalized throughput,
+	average latency, and tail latency of three real-world applications (with workloads in Table~\ref{emt:table:workloads}) on 
 	EMT-Linux, normalized to their performance on vanilla Linux.
 The measured differences of the three metrics are within 
 %  shows the performance of EMT-Linux on memory-intensive applications.
@@ -274,13 +274,13 @@ PostgreSQL & 64 GB  & 21 M & 100:0 & 25 M \\
 \bottomrule
 \end{tabular}
 \caption{\bf Application workloads used in the evaluation.}
-\label{table:workloads}
+\label{emt:table:workloads}
 \end{table}
 
 \begin{figure}[H]
 	\centering
 	% Legend subfigure
-	\begin{subfigure}[b]{0.34\textwidth}
+	\begin{subfigure}[b]{0.7\textwidth}
 		\centering
 		\includegraphics[width=\textwidth]{data/radix_real_app_legend.pdf}
 		% \includegraphics[width=\textwidth]{data/radix_real_app_single_legend.pdf}
@@ -288,36 +288,36 @@ PostgreSQL & 64 GB  & 21 M & 100:0 & 25 M \\
 
 
 	% Subfigure 1
-	\begin{subfigure}[b]{0.14\textwidth}
+	\begin{subfigure}[b]{0.3\textwidth}
 		\centering
 		\includegraphics[width=\textwidth]{data/radix_real_app_throughput.pdf}
 		% \includegraphics[width=\textwidth]{data/radix_real_app_throughput_single.pdf}
 		\caption{Throughput}
-		\label{figure:eval:eval-radix-real-app-throughput}
+		\label{emt:figure:eval:eval-radix-real-app-throughput}
 	\end{subfigure}%
 	% 
 	\hspace{0.01\textwidth}%
 	% Subfigure 2
-	\begin{subfigure}[b]{0.14\textwidth}
+	\begin{subfigure}[b]{0.3\textwidth}
 		\centering
 		\includegraphics[width=\textwidth]{data/radix_real_app_avg_latency.pdf}
 		% \includegraphics[width=\textwidth]{data/radix_real_app_avg_latency_single.pdf}
 		\caption{Avg. Latency}
-		\label{figure:eval:eval-radix-real-app-avg-latency}
+		\label{emt:figure:eval:eval-radix-real-app-avg-latency}
 	\end{subfigure}%
 	% 
 	\hspace{0.01\textwidth}%
 	% Subfigure 3
-	\begin{subfigure}[b]{0.14\textwidth}
+	\begin{subfigure}[b]{0.3\textwidth}
 		\centering
 		\includegraphics[width=\textwidth]{data/radix_real_app_p99_latency.pdf}
 		% \includegraphics[width=\textwidth]{data/radix_real_app_p99_latency_single.pdf}
 		\caption{P99 Latency}
-		\label{figure:eval:eval-radix-real-app-p99-latency}
+		\label{emt:figure:eval:eval-radix-real-app-p99-latency}
 	\end{subfigure}
 	\caption{\bf Performance overhead of EMT-Linux over vanilla Linux
 		on real-world applications}
-	\label{fig:eval:eval-radix-real-app}
+	\label{emt:fig:eval:eval-radix-real-app}
 \end{figure}
 
 % On average, EMT adds a negligible overhead of 0.19\%.
@@ -330,10 +330,10 @@ First, we carefully engineered the EMT interface to preserve the
 	call stacks, and maintain cache efficiency.
 % \schaix{The instruction cache hit rates on EMT-Linux are almost the 
 % 	same as in vanilla Linux
-% (more information can be found in Appendix~\ref{appendix:perf})}.
-% \schai{Instruction cache hit rates on EMT-Linux differ by at most 0.8\% from those on vanilla Linux (see Appendix \ref{appendix:perf})}.
+% (more information can be found in Appendix~\ref{emt:appendix:perf})}.
+% \schai{Instruction cache hit rates on EMT-Linux differ by at most 0.8\% from those on vanilla Linux (see Appendix \ref{emt:appendix:perf})}.
 \schai{Instruction cache hit rates on EMT-Linux differ from those on vanilla Linux by at most 0.8\%.}
-% (see Appendix \ref{appendix:perf})}.
+% (see Appendix \ref{emt:appendix:perf})}.
 Second, EMT enables us to implement all the hardware-specific optimizations in the MMU drivers.
 
 % We attribute it to the uses of compiler optimizations, 
@@ -347,7 +347,7 @@ Second, EMT enables us to implement all the hardware-specific optimizations in t
 % On average, EMT-Linux and vanilla Linux saves 0.14\% of execution time,
 % 	which we consider as a negligible difference.
 
-%	\schai{\texttt{addr\_range\_void} (Figure ~\ref{code:thpgen})
+%	\schai{\texttt{addr\_range\_void} (Figure ~\ref{emt:code:thpgen})
 %	since it is implemented in a different source file. 
 %	It could be further optimized by putting the function into a header file to enable more inline opportunities.}
 	% \TODO{inline a function due to XXX.}
@@ -376,8 +376,8 @@ Second, EMT enables us to implement all the hardware-specific optimizations in t
 
 
 % The reason why that EMT-Linux has a more stable performance trend in macrobenchmarks and memory intensive applications is that
-%	the major kernel activities are in 4K anonymous page fault handler (as shown in Figure~\ref{fig:eval:eval-kern-inst-breakdown}).
-%	EMT-Linux's performance difference is only of 0.5\% according to measurements from microbenchmarks in Figure ~\ref{fig:eval:microbenchmark}.
+%	the major kernel activities are in 4K anonymous page fault handler (as shown in Figure~\ref{emt:fig:eval:eval-kern-inst-breakdown}).
+%	EMT-Linux's performance difference is only of 0.5\% according to measurements from microbenchmarks in Figure ~\ref{emt:fig:eval:microbenchmark}.
 
 
 % EMT's negligible overhead is attributed to the implemenation of extensively using 
@@ -396,7 +396,7 @@ Second, EMT enables us to implement all the hardware-specific optimizations in t
 
 
 % Compared with Vanilla Linux, \branding does not add performance overhead to
-% kernel operations (Figure ~\ref{figure:eval:eval-stack-lebench}). The correct
+% kernel operations (Figure ~\ref{emt:figure:eval:eval-stack-lebench}). The correct
 % results and on-par performance of \eradix also confirms the \branding's
 % comprenhensiveness and implementation's correctness to support Linux's various
 % memory related syscalls and routines like page fault handler and context switch.
@@ -435,24 +435,24 @@ Second, EMT enables us to implement all the hardware-specific optimizations in t
 %	graphbig\_bfs \jyk{@Siyuan, Please draw this figure with horizontal
 %	bars. It will save space.}}
 %	%\vspace{-15pt}
-%	\label{figure:eval:eval-bfs}
+%	\label{emt:figure:eval:eval-bfs}
 % \end{figure}
 
 \begin{figure}[H]
 	\centering
-\begin{subfigure}[b]{0.42\textwidth}
+\begin{subfigure}[b]{0.7\textwidth}
 	\centering
 	\includegraphics[width=\textwidth]{data/kern_inst_legend_cropped.pdf}
 \end{subfigure}%
 \vskip\baselineskip
-\begin{subfigure}[b]{0.23\textwidth}
+\begin{subfigure}[b]{0.48\textwidth}
 	\centering
 	\includegraphics[width=\textwidth]{data/kern_inst_unified_never.pdf}
 	\caption{4KB}
-	\label{figure:eval:eval-kern-inst-breakdown-4k}
+	\label{emt:figure:eval:eval-kern-inst-breakdown-4k}
 \end{subfigure}%
 \hspace{0.01\textwidth}
-\begin{subfigure}[b]{0.23\textwidth}
+\begin{subfigure}[b]{0.48\textwidth}
 	\centering
 	\includegraphics[width=\textwidth]{data/kern_inst_unified_always.pdf}
 	\caption{THP}
@@ -460,21 +460,21 @@ Second, EMT enables us to implement all the hardware-specific optimizations in t
 %	The iterator used to do a lookup if current pte pointer is not valid (prev lookup not found entry in ECPT).
 %	With this version, we avoid doing a lookup by just let the caller know that current pte pointer is not valid as well.
 %	In the end, I think we only need to keep subfigure c.
-	\label{figure:eval:eval-kern-inst-breakdown-thp-harsh}
+	\label{emt:figure:eval:eval-kern-inst-breakdown-thp-harsh}
 \end{subfigure}
 \caption{\bf Distribution of kernel instructions of EMT-Linux with the Radix and ECPT MMU drivers.}
-\label{fig:eval:eval-kern-inst-breakdown}
+\label{emt:fig:eval:eval-kern-inst-breakdown}
 \end{figure}
 
 \subsubsection{OS Performance on ECPT}
-\label{ss:perf-ecpt}
+\label{emt:ss:perf-ecpt}
 
 \noindent
 We show that EMT enables us to understand OS performance
 	on new translation architectures using ECPT as an example.
 We evaluate ECPT by running EMT-Linux with the ECPT MMU driver on our emulation framework
 	and comparing its performance with the x86-64 radix MMU driver.
-% Table~\ref{table:configuration} shows the hardware configuration we simluated,
+% Table~\ref{emt:table:configuration} shows the hardware configuration we simluated,
 %	which models the hardware server we use.
 We run macro benchmarks and application workloads
 	and record all kernel and user instructions (with both 4KB pages and THP). 
@@ -499,7 +499,7 @@ We run macro benchmarks and application workloads
 % 	\includegraphics[width=0.49\textwidth]{data/kern-inst-grouped-stacked-bar.pdf}
 % 	\caption{\bf Distribution of kernel instructions}
 % 	%\vspace{-15pt}
-% 	\label{figure:eval:eval-kern-inst-breakdown}
+% 	\label{emt:figure:eval:eval-kern-inst-breakdown}
 % \end{figure}
 
 % \begin{figure}
@@ -509,7 +509,7 @@ We run macro benchmarks and application workloads
 % 	\includegraphics[width=0.5\textwidth]{data/kern_inst_never.pdf}
 % 	% \vspace{-0.1cm}
 % 	\caption{ 4KB}
-% 	\label{fig:eval:eval-kern-inst-breakdown-4KB}
+% 	\label{emt:fig:eval:eval-kern-inst-breakdown-4KB}
 % \end{subfigure}%
 % 	% \newline % This starts a new line
 % 	% Subfigure 2
@@ -521,15 +521,15 @@ We run macro benchmarks and application workloads
 % 	\includegraphics[width=0.5\textwidth]{data/kern_inst_always.pdf}
 % 	% \vspace{-0.1cm}
 % 	\caption{THP}
-% 	\label{fig:eval:eval-kern-inst-breakdown-thp}
+% 	\label{emt:fig:eval:eval-kern-inst-breakdown-thp}
 % \end{subfigure}
 % 	\caption{\bf Kernel instruction breadkown for 4KB and THP setup \eradix and \eecpt}
 % \end{figure}
 
 \para{Understanding OS Overhead of ECPT.}
-\label{ss:eval:eval-ecpt-os}
+\label{emt:ss:eval:eval-ecpt-os}
 % The evaluation helps understand ECPT from the OS perspective.
-Figure~\ref{fig:eval:eval-kern-inst-breakdown} shows the distribution of kernel instructions;
+Figure~\ref{emt:fig:eval:eval-kern-inst-breakdown} shows the distribution of kernel instructions;
 	most of them are for page fault handling. % in our setup.
 % Compared with Radix, ECPT spends 1.74x more instructions on page fault handling on average for 4KB pages,
 % 	and 2.41x more with THP enabled. 
@@ -550,7 +550,7 @@ These checks are on the critical path of page fault handling when THP is enabled
 %	is the \texttt{\small addr\_range\_void} function which takes 54.98\% of kernel instructions,
 %		which iterates the surrounding address space of the faulting location to check if the page fault can be handled by allocating a THP.
 For Radix, these checks are cheap (0.39\% of total kernel work)
-	because a PMD entry has information on PTE tables. % (Figure~\ref{fig:background:radix-native}).
+	because a PMD entry has information on PTE tables. % (Figure~\ref{emt:fig:background:radix-native}).
 If the entry is not valid or present, then neither 2MB nor 4KB mappings exist;
 the huge-page bit tells if the entry points to a huge page or a directory of 4KB pages.
 However, these checks are expensive in ECPT, as
@@ -558,7 +558,7 @@ However, these checks are expensive in ECPT, as
 	the kernel may need to check all 512 4KB entries of pages in 
 	the 2MB range, which requires many expensive lookup operations.
 We discussed the potential solution % using special entries in PMD-ECPT 
-	in \S\ref{sec:reflection:sparse}.
+	in \S\ref{emt:sec:reflection:sparse}.
 
 % is to record the information in a special entry 
 %	in the 2MB page table to avoid expensive checks.
@@ -580,7 +580,7 @@ We discussed the potential solution % using special entries in PMD-ECPT
 	\hline 
 	\end{tabular}
 	\caption*{\schaic{Should we include all graphbig benchmarks? the numbers are kind of similar, so I summarized as one row}}
-	\label{table:Kernel-inst-percentage}
+	\label{emt:table:Kernel-inst-percentage}
 \end{table}
 
 \schaic{Actually, isn't radix a a better counterpart for ECPT? since x86 is typically referred as the entire x86 architecture.
@@ -593,7 +593,7 @@ and ECPT only changes its translation architecture part.
 %		they also have to parse and format the data which involves more user instructions.
 % In contrast, GUPS and Sysbench have significantly more kernel instructions since 
 %	they faults in all the pages in memory during the loading stage.
-% Figure~\ref{figure:eval:eval-kern-inst-breakdown-4k} and Figure~\ref{figure:eval:eval-kern-inst-breakdown-thp} 
+% Figure~\ref{emt:figure:eval:eval-kern-inst-breakdown-4k} and Figure~\ref{emt:figure:eval:eval-kern-inst-breakdown-thp} 
 %	show all of their kernel instructions are in page fault handling.
 
 With THP enabled, Sysbench and GUPS spent less time in page fault handling
@@ -620,11 +620,11 @@ Also, compared to system calls such as \texttt{read}, \texttt{brk}, and \texttt{
 % Compared to x86, ECPT slows down the page fault handling by an average of \jztodo{100}\%,
 % 	while system calls are largely not affected.}
 % \TODO{How many are kernel instructions vs userspace instructions?
-% What are the observations from Figure~\ref{figure:eval:eval-kern-inst-breakdown}
+% What are the observations from Figure~\ref{emt:figure:eval:eval-kern-inst-breakdown}
 % 	and what are the conclusions?
 % Also, please improve Figure 13 as we discussed yesterday.} 
 
-% \schaic{The plot ~\ref{figure:eval:eval-kern-inst-breakdown} above needs to be modified in format, recapture loading phase data, as well as add gups and sysbench data}.
+% \schaic{The plot ~\ref{emt:figure:eval:eval-kern-inst-breakdown} above needs to be modified in format, recapture loading phase data, as well as add gups and sysbench data}.
 % \schaic{In loading phase, the timer effect will not be significant, so I feel acceptable to include timer. 
 % However, in later phase, we exclude timer, I will remove it for now.}
 
@@ -638,18 +638,18 @@ Also, compared to system calls such as \texttt{read}, \texttt{brk}, and \texttt{
 %	\includegraphics[width=\textwidth]{data/radix_always_graphbig_bfs_kern_inst.pdf}
 %	% \vspace{-0.1cm}
 %	\caption{x86-64 MMU driver}
-%	\label{fig:eval:eval-radix-always-vs-ecpt-always-flame-a}
-\begin{subfigure}[b]{0.34\textwidth}
+%	\label{emt:fig:eval:eval-radix-always-vs-ecpt-always-flame-a}
+\begin{subfigure}[b]{0.7\textwidth}
 	\centering
 	\includegraphics[width=\textwidth]{data/flame_legend.pdf}
 \end{subfigure}
 \vskip\baselineskip
-	\begin{subfigure}[b]{0.49\textwidth}
+	\begin{subfigure}[b]{0.7\textwidth}
 		\centering
 		\includegraphics[width=\textwidth]{data/ecpt_always_graphbig_bfs_no_iter_kern_inst.pdf.corrected.pdf}
 		% \vspace{-0.1cm}
 		\caption{ECPT MMU driver with no iterator optimization}
-		\label{fig:eval::eval-radix-always-vs-ecpt-always-flame-a}
+		\label{emt:fig:eval::eval-radix-always-vs-ecpt-always-flame-a}
 	\end{subfigure}
 
 %	\end{subfigure}%
@@ -658,9 +658,9 @@ Also, compared to system calls such as \texttt{read}, \texttt{brk}, and \texttt{
 	% \includegraphics[width=\textwidth]{data/ecpt_always_graphbig_bfs_default_kern_inst.pdf}
 	% % \vspace{-0.1cm}
 	% \caption{ECPT MMU driver with incomplete iterator optimization }
-	% \label{fig:eval:eval-radix-always-vs-ecpt-always-flame-b}
+	% \label{emt:fig:eval:eval-radix-always-vs-ecpt-always-flame-b}
 	% \end{subfigure}
-	\begin{subfigure}[b]{0.49\textwidth}
+	\begin{subfigure}[b]{0.7\textwidth}
 	\centering
 	\includegraphics[width=\textwidth]{data/ecpt_always_graphbig_bfs_with_iter_kern_inst.pdf.corrected.pdf}
 	% \includegraphics[width=\textwidth]{data/ecpt_always_graphbig_bfs_with_iter_kern_inst_cropped.pdf}
@@ -671,13 +671,13 @@ Also, compared to system calls such as \texttt{read}, \texttt{brk}, and \texttt{
 	% 	In the end, I think we only need to keep subfigure c.
 	% }
 	}
-	\label{fig:eval:eval-radix-always-vs-ecpt-always-flame-b}
+	\label{emt:fig:eval:eval-radix-always-vs-ecpt-always-flame-b}
 	\end{subfigure}
 	\caption{\bf Flame graph of EMT-Linux kernel instructions when running
 	% \jyk{The scales(total number of instructions) of two graphs are different. Do we need to mention the number of instructions?}
 	GraphBig BFS (THP enabled).}
 	% \schaic{\texttt{aspace\_void} needs to be consistent}}
-	\label{fig:eval:eval-ecpt-flame-thp}
+	\label{emt:fig:eval:eval-ecpt-flame-thp}
 \end{figure}
 
 
@@ -691,10 +691,10 @@ Also, compared to system calls such as \texttt{read}, \texttt{brk}, and \texttt{
 % ECPT PF 241,226,742
 % addr range componnet 57,406,634
 EMT exposes optimization opportunities for MMU drivers using customizable functions.
-Figure~\ref{fig:eval:eval-ecpt-flame-thp} uses flame graphs 
+Figure~\ref{emt:fig:eval:eval-ecpt-flame-thp} uses flame graphs 
 	to show the effectiveness of iterator optimization running 
-	GraphBIG BFS with THP. % (we discuss another customizable function optimization in Appendix~\ref{sec:app:another}).
-With the iterator optimization (\S\ref{ss:ecpt-mmu-driver}), 
+	GraphBIG BFS with THP. % (we discuss another customizable function optimization in Appendix~\ref{emt:sec:app:another}).
+With the iterator optimization (\S\ref{emt:ss:ecpt-mmu-driver}), 
 	ECPT can save 
 	% 47.27\%
 	49.0\% 
@@ -707,7 +707,7 @@ With the iterator optimization (\S\ref{ss:ecpt-mmu-driver}),
 %	which iterate through the address range to check if the address range has any valid mappings.
 % With iterator optimization, ECPT can save 79.86\% of its work in \texttt{addr\_range\_void}.
 The optimization drastically saves the work of hashing and lookups of the architecture-neutral default implementation,
-	by incrementing the pointer to an entry directly, as long as the entry is within an entry cluster (Figure~\ref{fig:ecpt-impl:ecpt-cluster}).
+	by incrementing the pointer to an entry directly, as long as the entry is within an entry cluster (Figure~\ref{emt:fig:ecpt-impl:ecpt-cluster}).
 % But, the optimized iterator is still significantly more expensive 
 %	than that of Radix MMU driver.
 % \TODO{talk about PWC -- see metareview}
@@ -758,7 +758,7 @@ Note that such kernel work as software overhead
 % While the ECPT's optimized version can avoid the lookup 
 %	if it can tell the next address is in the same cluster.
 % It reduces the number of ECPT lookups
-%	by exploiting PTE clustering and compaction design (Figure~\ref{fig:ecpt-impl:ecpt-cluster}).
+%	by exploiting PTE clustering and compaction design (Figure~\ref{emt:fig:ecpt-impl:ecpt-cluster}).
 % Our retrofit of ECPT structure also makes this optimization possible
 %	by making each PTE byte-addressable.
 % Given that lookup is an expensive operation for ECPT,
@@ -780,7 +780,7 @@ Note that such kernel work as software overhead
 % 	\caption{\bf Effects of optimizations of page fault handling 
 % 		with GraphBIG BFS.} 
 % %	\schaic{The effect of subfigure is not so well, there're just too little nubmer of bars}}
-% 	\label{figure:eval:opt-group-effect}
+% 	\label{emt:figure:eval:opt-group-effect}
 % 	\vspace{-15pt}
 % \end{wrapfigure}
 
@@ -797,19 +797,19 @@ The reason goes in how the page fault handler handles page faults under differen
 % optimization reduces the number of instructions executed to  45.10\% of the baseline.
 % The introduction of the hugepage optimization under this scenario 
 % 	can further reduce the execution count to 31.61\% of the baseline. 
-	% (Figure \ref{figure:eval:opt-group-effect}a).
-% With THP, the EMT-exposed optimizations reduce the kernel overhead by \jztodo{100}\% and then \jztodo{100}\%, respectively (Figure \ref{figure:eval:opt-group-effect}b).
+	% (Figure \ref{emt:figure:eval:opt-group-effect}a).
+% With THP, the EMT-exposed optimizations reduce the kernel overhead by \jztodo{100}\% and then \jztodo{100}\%, respectively (Figure \ref{emt:figure:eval:opt-group-effect}b).
 
 % code:iterx86
 The page fault handler checks on \texttt{thp\_eligible}
-	shown in Code snippet \ref{code:thpgen} before it proceeds to build a huge page.
+	shown in Code snippet \ref{emt:code:thpgen} before it proceeds to build a huge page.
 If \texttt{thp\_eligible} fails, the page fault handler
 	will try to fix the page fault as 4KB fault or permissin fault.
 It involves two checks:
 	1) \texttt{\_\_transparent\_hugepage\_enabled} checks VMA's THP properties
 	2) \texttt{addr\_range\_void} which checks if address range has any valid mappings.
 For ECPT, 1) is much cheaper than 2) since 2) involves iterating through the address range
-	as we mentioned in Section \ref{ss:perf-ecpt}.
+	as we mentioned in Section \ref{emt:ss:perf-ecpt}.
 
 \begin{wrapfigure}{hr}{0.2\textwidth}
 	\centering
@@ -817,7 +817,7 @@ For ECPT, 1) is much cheaper than 2) since 2) involves iterating through the add
 %	\vspace{-25pt}
 	\caption{Effects of optimizations on BFS's PF handler.} 
 %	\schaic{The effect of subfigure is not so well, there're just too little nubmer of bars}}
-	\label{figure:eval:opt-group-effect}
+	\label{emt:figure:eval:opt-group-effect}
 \end{wrapfigure}
 Under 4KB setup, the check 1) will always be false because the VMA is not backed by huge pages. 
 With huge page optimization, the page fault handler will skip the expensive address range iteration (check 2),
@@ -836,9 +836,9 @@ It utilizes the PTE clustering design of ECPT,
 % 	where expensive iterating and checking can be optimized.
 % To be specific, with customizable functions,
 % 	the ECPT MMU driver can perform faster iterations
-% 		by exploiting the spatial contiguity of translation entries within a PTE cluster (\S\ref{sss:ecpt-cluster})
+% 		by exploiting the spatial contiguity of translation entries within a PTE cluster (\S\ref{emt:sss:ecpt-cluster})
 % 			and thus avoiding redundant hash computations.
-% Further, as shown in Figure \ref{code:thpgen}, the ECPT MMU driver can optimize the eligibility checker
+% Further, as shown in Figure \ref{emt:code:thpgen}, the ECPT MMU driver can optimize the eligibility checker
 % 	to shortcut expensive range operation when THP is not possible,
 % 		bringing in additional benefits.
 % Hence, with 4KB pages only, as huge page operations are more frequently shortcutted,
@@ -846,7 +846,7 @@ It utilizes the PTE clustering design of ECPT,
 
 \begin{comment}
 \paragraph{Page walk latency}
-\label{ss:eval:eval-pw}
+\label{emt:ss:eval:eval-pw}
 
 % \begin{comment}
 \begin{table}
@@ -869,15 +869,15 @@ It utilizes the PTE clustering design of ECPT,
 	Page Walk Cache & 3 levels, 2-4-32 entries per level, 1 cycles RT \\
 	\hline
 	\end{tabular}
-	\label{table:configuration}
+	\label{emt:table:configuration}
 \end{table}
 % \end{comment}
 Our framework also enables us to measure MMU's page table walk latency
 	by replaying memory-traces in the DynamoRIO simulator.
 % ECPT is modified with two optimizations to help improve performance, early return and parallel page walk cache access. 
-Figure~\ref{fig:eval:eval:pw-4KB} and ~\ref{fig:eval:eval:pw-thp} shows the speedup of page table walk latency
+Figure~\ref{emt:fig:eval:eval:pw-4KB} and ~\ref{emt:fig:eval:eval:pw-thp} shows the speedup of page table walk latency
 	of a ECPT MMU, normalized to a x86-64 MMU, 
-	using the hardware configuration in Table~\ref{table:configuration}.
+	using the hardware configuration in Table~\ref{emt:table:configuration}.
 
 Our results confirm that ECPT can improve the page table walk latency,
 	with a speedup of 8.86\% for the 4KB page only case and 8.53\% for the THP case.
@@ -903,7 +903,7 @@ Our results confirm that ECPT can improve the page table walk latency,
 % 	\caption{\bf Speedup of page walk in (a) 4KB and (b) THP of \eecpt over \eradix. \jyk{Replace EMT-Radix bars
 % 	with a line. It saves space.}}
 % 	%\vspace{-15pt}
-% 	\label{fig:eval:pw}
+% 	\label{emt:fig:eval:pw}
 % \end{figure}
 
 \end{comment}
@@ -915,7 +915,7 @@ Our results confirm that ECPT can improve the page table walk latency,
 % 	% \vspace{-0.1cm}
 % 	\vspace{-20pt}
 % 	\caption{Page table walk latency}
-% 	\label{fig:eval:eval:pw-4KB}
+% 	\label{emt:fig:eval:eval:pw-4KB}
 % 	\end{subfigure}%
 % 	% Subfigure 2
 % 	% \vspace{-2cm}
@@ -928,7 +928,7 @@ Our results confirm that ECPT can improve the page table walk latency,
 % 	% \vspace{-0.1cm}
 % 	\vspace{-20pt}
 % 	\caption{IPC}
-% 	\label{fig:eval:eval:ipc-4KB}
+% 	\label{emt:fig:eval:eval:ipc-4KB}
 % 	\end{subfigure}
 
 % 	\begin{subfigure}[b]{0.45\textwidth}
@@ -937,7 +937,7 @@ Our results confirm that ECPT can improve the page table walk latency,
 % 		% \vspace{-0.1cm}
 % 		\vspace{-20pt}
 % 		\caption{E2E}
-% 		\label{fig:eval:eval:e2e-4KB}
+% 		\label{emt:fig:eval:eval:e2e-4KB}
 % 	\end{subfigure}
 
 % 	\caption{\bf Speedup of page walk, IPC and E2E cycles for \eradix and \eecpt (running stage)}
@@ -945,7 +945,7 @@ Our results confirm that ECPT can improve the page table walk latency,
 % \end{figure}
 
 \subsubsection{Hardware Simulation}
-\label{sec:eval:hwsim}
+\label{emt:sec:eval:hwsim}
 
 \paragraph{ECPT}
 
@@ -955,12 +955,12 @@ EMT's emulator toolchain provides an open platform of hardware simulation
 To demonstrate this, we run hardware simulations for EMT-Linux with the 
 % \schaix{ECPT MMU and Radix drivers}
 \schai{x86-64 radix and ECPT MMU drivers} using the DynamoRIO simulator~\cite{plat:dynamorio}.
-	% using DynamoRIO~\cite{plat:dynamorio}. % (Figure~\ref{fig:eval:emulator}).
+	% using DynamoRIO~\cite{plat:dynamorio}. % (Figure~\ref{emt:fig:eval:emulator}).
 We use the hardware configuration 
 % \schaix{and simulation methodology} 
 described in the ECPT paper~\cite{skarlatos2020ecpt}.
 \schai{For PWC configuration, we follow more recent works~\cite{self:dmt,margaritov2019asap} to use 3 levels of PWC with 2-4-32 entries per level.}
-We use the macro benchmarks and the three application workloads described in \S\ref{sec:eval:metho}.
+We use the macro benchmarks and the three application workloads described in \S\ref{emt:sec:eval:metho}.
 % \jz{
 % We demonstrate that EMT can enable further insights when combined with existing hardware simulation infrastructures.
 % EMT-Linux does not assume the execution platform,
@@ -1005,9 +1005,9 @@ We use the macro benchmarks and the three application workloads described in \S\
 % % The simulator can calculate the  for each memory access
 % % 	(~\cite{self:dmt})
 % % We uniformly sampled over the life time of the application, captured trace with QEMU, 
-% % 	and ran hardware simulation using DynamoRIO on the trace(Figure~\ref{fig:eval:emulator}). 
+% % 	and ran hardware simulation using DynamoRIO on the trace(Figure~\ref{emt:fig:eval:emulator}). 
 % % We run hardware simulation using DynamoRIO with 
-% % 	instruction and memory traces collected by our toolchain (Figure~\ref{fig:eval:emulator}).
+% % 	instruction and memory traces collected by our toolchain (Figure~\ref{emt:fig:eval:emulator}).
 
 
 % % We measure page walk latency, instructions per cycles (IPC), and total cycles across the macro benchmarks 
@@ -1023,7 +1023,7 @@ We use the macro benchmarks and the three application workloads described in \S\
 %	seen in existing hardware research~\cite{self:dmt,margaritov2019asap,plat:dynamorio:copta},
 %	as we cannot use the original ECPT simulation setup~\cite{skarlatos2020ecpt} due to its use of commercial simulator.
 % We set the simulation parameters according to the original ECPT paper~\cite{skarlatos2020ecpt}.
-% We reuse the applications we evaluated in previous sections (see \S\ref{sec:eval:metho}) for consistency,
+% We reuse the applications we evaluated in previous sections (see \S\ref{emt:sec:eval:metho}) for consistency,
 %	and they also largely overlap the ECPT-evaluated workloads~\cite{skarlatos2020ecpt}.
 % For each application, we captured a trace containing 2 billion user instructions,
 %	alongside all kernel instructions happening during the 2B instructions,
@@ -1034,45 +1034,41 @@ We use the macro benchmarks and the three application workloads described in \S\
 % }
 \begin{figure}[H]
 	\centering
-\begin{subfigure}[b]{0.28\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/ecpt_legend.pdf}
-	% \vspace{-0.6cm}
-\end{subfigure}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/ecpt_pgwalk_unified_never.pdf}
-	% \includegraphics[width=\textwidth]{data/ecpt_pgwalk_unified_never_single.pdf}
-	% \vspace{-0.1cm}
-	\caption{Page table walk latency}
-	\label{fig:eval:eval:pw-4KB}
-	\end{subfigure}%
-	\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/ecpt_ipc_unified_never.pdf}
-	% \includegraphics[width=\textwidth]{data/ecpt_ipc_unified_never_single.pdf}
-	\caption{IPC}
-	\label{fig:eval:eval:ipc-4KB}
+	\begin{subfigure}[b]{0.6\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/ecpt_legend.pdf}
 	\end{subfigure}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/ecpt_e2e_unified_never.pdf}
-	% \includegraphics[width=\textwidth]{data/ecpt_e2e_unified_never_single.pdf}
-	\caption{Total cycles}
-	\label{fig:eval:eval:e2e-4KB}	
-\end{subfigure}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/ecpt_e2e_never.pdf}
-	% \includegraphics[width=\textwidth]{data/ecpt_e2e_running_never.pdf}
-	\caption{Total cycles (running phase)}
-	\label{fig:eval:eval:e2ert-4KB}
-\end{subfigure}
+	\vskip\baselineskip
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/ecpt_pgwalk_unified_never.pdf}
+		\caption{Page table walk latency}
+		\label{emt:fig:eval:eval:pw-4KB}
+	\end{subfigure}\hspace{0.02\textwidth}%
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/ecpt_ipc_unified_never.pdf}
+		\caption{IPC}
+		\label{emt:fig:eval:eval:ipc-4KB}
+	\end{subfigure}
+	\vskip\baselineskip
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/ecpt_e2e_unified_never.pdf}
+		\caption{Total cycles}
+		\label{emt:fig:eval:eval:e2e-4KB}
+	\end{subfigure}\hspace{0.02\textwidth}%
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/ecpt_e2e_never.pdf}
+		\caption{Total cycles (running phase)}
+		\label{emt:fig:eval:eval:e2ert-4KB}
+	\end{subfigure}
 \caption{{\bf ECPT hardware simulation results--- Page Table Walk Latency, 
     Instruction Per Cycle (IPC) and Total Cycles---with the ECPT system 
     and the x86-64 system, running EMT-Linux.} All results are normalized
     to those of the x86-64 system as the baselines.}
-\label{fig:hwsim}
+\label{emt:fig:hwsim}
 % \vspace{-5pt}
 \end{figure}
 
@@ -1081,9 +1077,9 @@ Our toolchain measures traditional hardware metrics, namely
 	Page Table Walk Latency and Instructions Per Cycle (IPC),
 	which are considered 
 	key performance metrics of hardware translation architectures (see~\cite{skarlatos2020ecpt,park2022fpt}).
-% Figure~\ref{fig:eval:eval:pw-4KB} and \ref{fig:eval:eval:ipc-4KB}
+% Figure~\ref{emt:fig:eval:eval:pw-4KB} and \ref{emt:fig:eval:eval:ipc-4KB}
 %	shows the speedup of page walk latency and IPC of \eecpt over \eradix.
-\schai{As shown in Figures~\ref{fig:eval:eval:pw-4KB} and~\ref{fig:eval:eval:ipc-4KB},
+\schai{As shown in Figures~\ref{emt:fig:eval:eval:pw-4KB} and~\ref{emt:fig:eval:eval:ipc-4KB},
 	ECPT has significant performance advantages over x86-64 (Radix).}
 On average, ECPT speeds up page table walks by 23.1\%,
 	and increases IPC by 7.0\%. %and end-to-end performance by 2.5 \%.
@@ -1109,11 +1105,11 @@ meanwhile, ECPT pays extra cycles for hash computation in addition to CWC access
 We find that IPC, which measures instruction throughput, does not fully 
 	reflect application runtime---though
 	ECPT increases IPC, our ECPT MMU driver introduces 
-	more kernel instructions than the x86-64 MMU driver (\S\ref{ss:eval:eval-ecpt-os}).
+	more kernel instructions than the x86-64 MMU driver (\S\ref{emt:ss:eval:eval-ecpt-os}).
 Hence, we measure the total cycles for running 
 	macro benchmarks and applications,
-	including the OS overhead (mostly page-fault handling as shown in Figure~\ref{fig:eval:eval-kern-inst-breakdown}).
-\schai{Figure~\ref{fig:eval:eval:e2e-4KB} shows that},
+	including the OS overhead (mostly page-fault handling as shown in Figure~\ref{emt:fig:eval:eval-kern-inst-breakdown}).
+\schai{Figure~\ref{emt:fig:eval:eval:e2e-4KB} shows that},
 	on average, the ECPT system reduces total cycles by 2.3\% across the workloads.
 GUPS and Memcached show major benefits, where the ECPT system reduces the total cycles 
 	by 11.5\% and 12.9\%, because 
@@ -1121,7 +1117,7 @@ GUPS and Memcached show major benefits, where the ECPT system reduces the total 
 	% these two workloads involve 
 	% \schaix{low kernel work.}
 % \schai{significant proportion of page walk time.}
-% \schaix{Detailed results are in Appendix~\ref{sec:details_hwsim}}.
+% \schaix{Detailed results are in Appendix~\ref{emt:sec:details_hwsim}}.
 
 \schai{The aforementioned analysis shows that the OS can play 
     an important role in application performance,
@@ -1132,7 +1128,7 @@ Prior work assumed that OS overhead is constant under different memory-translati
 In the initial modeling, the memory trace is collected from running benchmarks 
 	on vanilla Linux on x86-64; 
 	the trace is then replayed in a simulator of ECPT MMU. 
-As shown in \S\ref{ss:perf-ecpt}, memory translation architectures can have profound implications for OS performance. 
+As shown in \S\ref{emt:ss:perf-ecpt}, memory translation architectures can have profound implications for OS performance. 
 % For example, in ECPT and other hashing-based translation schemes, range operations are inherently more expensive.
 EMT aims to enable OS experience for new translation architectures.
 We believe that EMT effectively lowers the barrier to implement OS support for new memory-translation architectures
@@ -1151,7 +1147,7 @@ The running phase involves less kernel work with kernel instructions
 % If we only consider the running phase, 
 With only the running phase considered, ECPT 
     improves IPC by 7.5\% and reduces total cycles by 6.6\% 
-	compared to the x86-64 system (Figure~\ref{fig:eval:eval:e2ert-4KB}).
+	compared to the x86-64 system (Figure~\ref{emt:fig:eval:eval:e2ert-4KB}).
 	
 The results could be different with different hardware simulators.
 We expect the impact of kernel instructions to become smaller 
@@ -1163,13 +1159,13 @@ We expect the impact of kernel instructions to become smaller
 
 % \jz{Based on the simulated result,
 %	we further consider the impact of software overhead bring in by the ECPT kernel implemenation.
-% We time the software overhead (\S\ref{sec:eval:eval-EMT-radix-vs-vanilla} and \S\ref{ss:perf-ecpt})
-%	and the IPC (Figure~\ref{fig:eval:eval:ipc-4KB}) to extrapolate the application runtime.}
+% We time the software overhead (\S\ref{emt:sec:eval:eval-EMT-radix-vs-vanilla} and \S\ref{emt:ss:perf-ecpt})
+%	and the IPC (Figure~\ref{emt:fig:eval:eval:ipc-4KB}) to extrapolate the application runtime.}
 
-% \jz{Figure~\ref{fig:eval:eval:e2e-4KB} show the extrapolated end-to-end application runtime of \eecpt over \eradix.
+% \jz{Figure~\ref{emt:fig:eval:eval:e2e-4KB} show the extrapolated end-to-end application runtime of \eecpt over \eradix.
 % On average, ECPT speeds up application runtime by 2.5\%.
 % We notice that} ECPT's IPC advantage is compromised by the high overhead in kernel memory management operations.
-% As shown in Figure~\ref{figure:eval:eval-kern-inst-breakdown-4k}, ECPT shows a 1.56x increase in kernel work
+% As shown in Figure~\ref{emt:figure:eval:eval-kern-inst-breakdown-4k}, ECPT shows a 1.56x increase in kernel work
 %	compared to radix.
 % Its more complicated page table management routine leads to more kernel instructions while running the same user applications.
 % The original ECPT doesn't reveal this signal since it focuses speedup analysis of user space instructions
@@ -1203,57 +1199,56 @@ We expect the impact of kernel instructions to become smaller
 
 \begin{figure}[H]
 	\centering
-\begin{subfigure}[b]{0.45\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/FPT_legend.pdf}
-	% \vspace{-1pt}
-\end{subfigure}
-% \vspace{5pt}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/fpt_pgwalk_unified_never.pdf}
-	% \vspace{-0.1cm}
-	\caption{Page table walk latency}
-	\label{fig:eval:eval:fpt-pw-4KB}
-	\end{subfigure}%
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/fpt_ipc_unified_never.pdf}
-	\caption{IPC}
-	\label{fig:eval:eval:fpt-ipc-4KB}
-\end{subfigure}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/fpt_e2e_unified_never.pdf}
-	\caption{Total cycles}
-	\label{fig:eval:eval:fpt-e2e-4KB}	
-\end{subfigure}
-\begin{subfigure}[b]{0.235\textwidth}
-	\centering
-	\includegraphics[width=\textwidth]{data/fpt_e2e_running_never.pdf}
-	\caption{Total cycles (running phase)}
-	\label{fig:eval:eval:fpt-e2ert-4KB}
-\end{subfigure}
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/FPT_legend.pdf}
+	\end{subfigure}
+	\vskip\baselineskip
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/fpt_pgwalk_unified_never.pdf}
+		\caption{Page table walk latency}
+		\label{emt:fig:eval:eval:fpt-pw-4KB}
+	\end{subfigure}\hspace{0.02\textwidth}%
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/fpt_ipc_unified_never.pdf}
+		\caption{IPC}
+		\label{emt:fig:eval:eval:fpt-ipc-4KB}
+	\end{subfigure}
+	\vskip\baselineskip
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/fpt_e2e_unified_never.pdf}
+		\caption{Total cycles}
+		\label{emt:fig:eval:eval:fpt-e2e-4KB}
+	\end{subfigure}\hspace{0.02\textwidth}%
+	\begin{subfigure}[b]{0.48\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/fpt_e2e_running_never.pdf}
+		\caption{Total cycles (running phase)}
+		\label{emt:fig:eval:eval:fpt-e2ert-4KB}
+	\end{subfigure}
 \caption{{\bf Hardware simulation results of the FPT system  
     and the x86-64 system, running EMT-Linux. } All results are normalized
     to those of the x86-64 system as the baselines.}
-\label{fig:hwsim}
+\label{emt:fig:hwsim-fpt}
 % \vspace{-5pt}
 \end{figure}
 
 \paragraph{\schai{FPT}}
-\label{sec:eval:fpt}
+\label{emt:sec:eval:fpt}
 % \noindent
 % \para{FPT L3+L2.}
 \noindent
 \schai{We start with a FPT configuration 
-	that flattens L3+L2 tables (see Figure~\ref{fig:background:radix-native})
+	that flattens L3+L2 tables (see Figure~\ref{emt:fig:background:radix-native})
 	which was implemented by the original OS prototype~\cite{park2022fpt}.
-% We evaluated this configuration following the methodology in \S\ref{sec:eval:hwsim}. 
+% We evaluated this configuration following the methodology in \S\ref{emt:sec:eval:hwsim}. 
 Our evaluation shows that the benefit of flattening L3+L2 is limited: 
 	only L3 entries were saved, which were cached effectively in x86-64. 
-As shown in Figures~\ref{fig:eval:eval:fpt-pw-4KB}, ~\ref{fig:eval:eval:fpt-ipc-4KB},
-	~\ref{fig:eval:eval:fpt-e2e-4KB},
+As shown in Figures~\ref{emt:fig:eval:eval:fpt-pw-4KB}, ~\ref{emt:fig:eval:eval:fpt-ipc-4KB},
+	~\ref{emt:fig:eval:eval:fpt-e2e-4KB},
 	compared with Linux on x86-64 (baseline), on average, 
 	the FPT-based system speeds up page table walk latency by 5.5\%, IPC by 1.0\%, 
 	and the total cycles by 1.1\%.}
@@ -1269,7 +1264,7 @@ We implemented a 4KB-only version and evaluated it with only 4KB base pages
 %	but not implemented due to the difficulty of supporting 2MB huge pages (Section 3.4 in~\cite{park2022fpt}).
 With this configuration, compared with Linux on x86-64,
 	the FPT-based system speeds up page table walk latency by 15.3\%, IPC by 3.6\%,
-	and total cycles by 3.7\% (Figures~\ref{fig:eval:eval:fpt-pw-4KB},~\ref{fig:eval:eval:fpt-ipc-4KB}, and~\ref{fig:eval:eval:fpt-e2e-4KB}).
+	and total cycles by 3.7\% (Figures~\ref{emt:fig:eval:eval:fpt-pw-4KB},~\ref{emt:fig:eval:eval:fpt-ipc-4KB}, and~\ref{emt:fig:eval:eval:fpt-e2e-4KB}).
 % OS overhead by 3.4\%
 % GUPS and Memcached benefit the most: their total cycles are reduced by 10.8\% and 12.7\% over the baseline.
 
@@ -1282,10 +1277,10 @@ With this configuration, compared with Linux on x86-64,
 
 % We find that flattening L4+L3 and L2+L1 leads to similar performance with ECPT in the running phase.
 Flattening both L4+L3 and L2+L1 in FPT yields performance comparable to ECPT in the running phase.
-	% FPT reduces total cycles by 6.4\% and ECPT by 6.6\% (Figure ~\ref{fig:eval:eval:fpt-e2ert-4KB} and~\ref{fig:eval:eval:e2ert-4KB}).
+	% FPT reduces total cycles by 6.4\% and ECPT by 6.6\% (Figure ~\ref{emt:fig:eval:eval:fpt-e2ert-4KB} and~\ref{emt:fig:eval:eval:e2ert-4KB}).
 Compared with radix, ECPT and FPT 
 	reduce total cycles by 6.6\% and 6.4\%, respectively 
-	(Figures~\ref{fig:eval:eval:e2ert-4KB} and~\ref{fig:eval:eval:fpt-e2ert-4KB}).
+	(Figures~\ref{emt:fig:eval:eval:e2ert-4KB} and~\ref{emt:fig:eval:eval:fpt-e2ert-4KB}).
 	% with matched hardware metrics.
 	% However, FPT has a lower overall page table walk latency speedup and IPC speedup.
 % This is caused by performance difference in different phases.

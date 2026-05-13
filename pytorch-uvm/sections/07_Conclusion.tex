@@ -1,0 +1,51 @@
+\subsection{Future Work}
+
+\subsubsection{Thrashing Mitigation: App-Aware UVM Eviction}
+\label{uvm:sec:future:thrash}
+As demonstrated in our evaluation,
+    thrashing remains a primary bottleneck for UVM under heavy oversubscription.
+A root cause of this thrashing is the semantic gap between
+    the UVM driver's eviction policy and the framework's user-space caching allocator.
+The driver typically evicts pages based on hardware-level access history or allocation order,
+    which frequently conflicts with logical reuse:
+    a block allocated via \texttt{cudaMallocManaged} long ago
+    might be logically hot because the caching allocator just reassigned it to a new tensor.
+To fully mitigate thrashing,
+    the UVM driver needs eviction policies that are informed by
+    application-level usage patterns and logical block lifetimes.
+
+\subsubsection{Thrashing Mitigation: Utilization of App Hints}
+\label{uvm:sec:future:hints}
+Existing application-level offloading frameworks
+    (e.g., for KV caches and model weights)
+    already compute detailed schedules for when data will be needed next.
+Rather than using these schedules to manually orchestrate data movement,
+    frameworks could pass them down as hints to improve the UVM driver's
+    eviction and prefetching policies.
+While relying on application hints may seem contrary to UVM's goal
+    of transparent memory management,
+    it strikes a pragmatic balance:
+    the application provides high-level guidance on data lifetimes,
+    and the driver retains the responsibility of executing
+    the physical migrations and managing the hardware page tables.
+
+
+\subsubsection{Multiple GPU and Cross-Node Support}
+Existing \uvmname is based on single GPU attached to single CPU node.
+In practice, multi-GPU system is a hard requirement for AI workloads in production.
+We need to test UVM and extend \uvmname to support multi-GPU system.
+Existing Pytorch manages memory for each GPU separately;
+in other words, each GPU has its own caching allocator that is unaware of other GPUs.
+
+For UVM, the pattern will change since every GPU can access the memory. 
+
+
+\subsubsection{Using cudaGraph to hint UVM Migration}
+UVM suffers from lack of information from the application level.
+CudaGraph compiles a series of cuda kernel first,
+and then launch all of them at once.
+We can borrow the idea to have a record-and-replay pattern.
+We can record the page faults
+happened at compile time,
+and use the compile time information 
+to accelerate the replay process.

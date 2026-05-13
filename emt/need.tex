@@ -1,5 +1,5 @@
 \subsection{The Need for a New OS Framework}
-\label{sec:need}
+\label{emt:sec:need}
 
 \begin{figure}[H]
 	\centering
@@ -25,7 +25,7 @@ radix-tree based translation.}
 % \jyk{As a reviewer, I am curious how this code example
 % has been changed with \branding. How about showing the EMT version too, explaining
 % how we addressed each memory semantic overload.}}
-\label{fig:need:linux-no-interface}
+\label{emt:fig:need:linux-no-interface}
 \end{figure}
 
 \noindent
@@ -64,7 +64,7 @@ We argue that the lack of OS effort is largely due to memory management systems
 
 % \vspace{-5pt}
 % \subsubsection{Hardwiring Translation Schemes is Untenable}
-% \label{sec:need:hardwire}
+% \label{emt:sec:need:hardwire}
 
 \para{Hardwiring Translation Schemes Is Untenable.}
 \noindent
@@ -81,13 +81,13 @@ Without an extensible framework,
 % 	\vspace{-25pt}
 % 	\caption{\bf Examples of Linux memory management code that is hardwired to
 % 	tree-based translation.}
-% 	\label{fig:need:linux-no-interface}
+% 	\label{emt:fig:need:linux-no-interface}
 % 	\vspace{-12.5pt}
 % \end{figure}
 
 
 
-Figure~\ref{fig:need:linux-no-interface} shows a representative example in Linux, where a memory
+Figure~\ref{emt:fig:need:linux-no-interface} shows a representative example in Linux, where a memory
 	operation for unmapping a virtual address range at PMD level (\texttt{\small vunmap\_pmd\_range} in \texttt{\small vmalloc.c}) 
 	makes the following
 	assumptions specific to Linux's tree definition:
@@ -118,11 +118,11 @@ Similarly, though FPT's design strives to limit OS changes~\cite{park2022fpt},
 
 Furthermore, without a well-defined interface, memory management code becomes hard to maintain
 	due to implicit assumptions and semantic overloads with continuous optimizations and fixes.
-In Figure~\ref{fig:need:linux-no-interface}, \texttt{\small pmd\_none\_or\_clear\_bad()} 
+In Figure~\ref{emt:fig:need:linux-no-interface}, \texttt{\small pmd\_none\_or\_clear\_bad()} 
 	overloads three semantics, making the code hard to maintain.
 
 %	as Linux is the dominating OS kernel for high-performance, memory-intensive computing,
-%	the lack of extensibility has become a barrier to hardware innovations as discussed in \S\ref{sec:intro}.
+%	the lack of extensibility has become a barrier to hardware innovations as discussed in \S\ref{emt:sec:intro}.
 % because it is a must to have kernel support for new hardware
 %	for evaluation;
 %	simulation helps, but is insuffient as we will show in our evaluation.
@@ -145,7 +145,7 @@ struct file_operations {
 		VFS assumes the presence of a directory tree and everything is a variable-length file.
 		Such assumptions are not held for page-based address translation,
 			leading to both redundancy and deficiency when serving as an address translation interface.}
-\label{code:vfs}
+\label{emt:code:vfs}
 \end{figure}
 \end{comment}
 
@@ -168,7 +168,7 @@ void walk_pte_range(pmd, addr, end, walk) {
 \end{minted}
 
 \caption{\bf Hardware-specific optimizations in Linux.}
-\label{fig:need:linux-performance-opt}
+\label{emt:fig:need:linux-performance-opt}
 \end{figure}
 
 % \begin{figure}
@@ -176,12 +176,12 @@ void walk_pte_range(pmd, addr, end, walk) {
 % 	\includegraphics[width=0.49\textwidth]{figs/linux-performance-opti}
 % 	\vspace{-25pt}
 % 	\caption{\bf Hardware-specific optimizations in Linux.}
-% 	\label{fig:need:linux-performance-opt}
+% 	\label{emt:fig:need:linux-performance-opt}
 % 	\vspace{-12.5pt}
 % \end{figure}
 
 \para{Hardware-Specific Optimizations Are Desired.}
-%\label{sec:need:llopt}
+%\label{emt:sec:need:llopt}
 Inspired by Mach/BSD~\cite{freebsd:pmap,cranor99uvm,rashid1987machine} 
 	that have clean separation of machine-independent and dependent code,
 	we started from a pmap-like interface for Linux.
@@ -210,7 +210,7 @@ For example, pmap routines % like \texttt{\small pmap\_enter()} and \texttt{\sma
 	only reference a virtual address without exposing
 	translation entries.
 % The interface makes low-level optimizations hard. 
-Figure~\ref{fig:need:linux-performance-opt} shows three common patterns of optimizations in existing Linux code:
+Figure~\ref{emt:fig:need:linux-performance-opt} shows three common patterns of optimizations in existing Linux code:
 	1) batching with fine-grained locks for range operations,
 	2) in-place translation entry updates with no data copy,
 	and 3) direct fetching of translation entries by offsets. 
@@ -272,7 +272,7 @@ void pmap_zero_page(vm_page_t);
 	\caption{Part of the FreeBSD-optimized Mach interface.
 		Mach uses virtual addresses as the reference and pushes certain operations to architecture-dependent parts,
 			resulting in a loss of performance and scalability.}
-\label{code:bsd}
+\label{emt:code:bsd}
 \end{figure}
 \end{comment}
 
@@ -322,7 +322,7 @@ Fundamentally, file system interfaces can hardly serve as an effective
 %
 % Second, VFS lacks specific interfaces to accomplish necessary architectural operations while others are redundant.
 % For example, both page tables and PTE are frequently read and written,
-%	whereas, under the VFS interface (Figure \ref{code:vfs}), there is only a single (\texttt{file}-based) \texttt{read}/\texttt{write} interface.
+%	whereas, under the VFS interface (Figure \ref{emt:code:vfs}), there is only a single (\texttt{file}-based) \texttt{read}/\texttt{write} interface.
 % This forces an semantic overlap between PT operations and PTE operations.
 % Yet, VFS provides interfaces like \texttt{llseek} and \texttt{iterate} that are not needed by address translation.
 %

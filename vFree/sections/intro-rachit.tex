@@ -1,0 +1,112 @@
+\subsection{Introduction}
+\label{vfree:sec:intro}
+Input/Output (IO) memory protection prevents buggy or malicious IO devices from executing errant data transfers 
+    into host memory. 
+IO memory protection in modern servers is achieved using a combination of software and hardware mechanisms. 
+The operating system (OS) assigns direct memory access (DMA) capable IO devices (\textit{e.g.},
+    network interface cards and storage devices) with IO virtual addresses (IOVAs). 
+IO devices initiate DMAs using these IOVAs; for each DMA, a host hardware---IO memory management unit (IOMMU)---uses 
+    an IO page table (IOPT) to translate IOVAs to host physical addresses 
+    that are used to execute the DMA; 
+    the address translation is sped up using special IOMMU caches. 
+To achieve powerful (aka strict~\cite{Amit2011vIOMMU,Rubin2024FastSafe}) IO memory protection, 
+    IOPT entries must be unmapped and IOMMU caches must be invalidated immediately after each DMA. 
+Recent studies from production clusters have established that achieving strict IO memory protection, 
+    even with state-of-the-art mechanisms, 
+    has significant impact on application-level performance~\cite{agarwal2022understanding}. 
+For the bare metal case, a now-long line of work~\cite{ben2007price, Malka2015rIOMMU, malka2015efficient, peleg2015utilizing, Markuze2016true, markuze2018damn, RajapakshaIOMMU, Rubin2024FastSafe} 
+    has led to mechanisms that enable achieving strict IO memory protection with minimal overheads.
+
+In virtualized environments, the above IOMMU-based design is sufficient 
+    to achieve strict IO memory protection \textit{across} virtual machines (VMs): 
+    by isolating each VM's memory, the IOMMU-based design ensures that 
+    a device (or a virtual function) can only access memory regions explicitly 
+    authorized for the VM. 
+Enabling strict intra-VM IO memory protection---fine-grained protection across devices and virtual functions 
+    \textit{within a VM}~\cite{Amit2011vIOMMU,RajapakshaIOMMU,AlexCodeInjection}---is much harder. 
+The state-of-the-art for (intra-VM) IO memory protection is the celebrated work from Amit et. al. on vIOMMU 
+    from over a decade ago~\cite{Amit2011vIOMMU}. 
+vIOMMU exposes an emulated IOMMU to VMs; each VM operates on its emulated IOMMU, 
+    and the hypervisor intercepts and executes privileged operations to the physical IOMMU. 
+\textit{To maintain strict IO memory protection, this triggers at least one unavoidable VM exit}. 
+The vIOMMU evaluation establishes the hardness of simultaneously achieving strict IO memory protection and high performance: 
+    even with a variety of intriguing techniques, 
+    enabling strict IO memory protection with vIOMMU reduces application-level throughput to merely 3Gbps 
+    (30$\%$ of the 10Gbps network bandwidth at the time). 
+This severely limits the feasibility of strict IO memory protection 
+    for IO-intensive applications: most of the host resources would be idle 70$\%$ of the time.
+%Follow-up work has led to reduction in virtualization overheads using software~\cite{Gordon2012eli, Har2013paraIO, Malka2015rIOMMU, Tian2020coIOMMU} and/or specialized hardware mechanisms~\cite{RajapakshaIOMMU}; however, the problem of simultaneously achieving strict IO memory protection and high performance remains open.
+
+The server software and hardware ecosystem has evolved significantly over the past decade since the vIOMMU work. 
+Advances in device passthrough~\cite{intel_vtd_spec, amd_iommu_spec, arm_smmu_spec, Wang2025ToPRI, Guo2024VPRI} 
+    and IO memory management~\cite{markuze2018damn} mechanisms have been widely incorporated within modern software ecosystem, 
+    opening up the potential to reduce the overheads of IO memory protection. 
+The number of cores have increased by 8--32$\times$, 
+    enabling more resources to enable IO memory protection; 
+    and, advances in IOMMU hardware (\textit{e.g.}, IOPT caches~\cite{Rubin2024FastSafe}) 
+    along with advances in processor architectures (\textit{e.g.}, 
+    support for nested translations~\cite{intel_vtd_spec}) have the potential to further reduce IO memory protection overheads. 
+Unfortunately, these software and hardware advances have not kept up with the 40$\times$ 
+    increase in server IO bandwidth over the past decade; 
+    for instance, we observe that enabling strict intra-VM IO memory protection---even with state-of-the-art device passthrough 
+    mechanisms, IO memory management, IOMMU hardware, and nested translation---results in 
+    as much as 83-95$\%$ degradation in application-level throughput 
+    on our testbed with 400Gbps network bandwidth! 
+Thus, while exploiting IO transfers at memory access latency timescales 
+    (a page worth of data transfer at 400Gbps of IO bandwidth takes 80 nanoseconds) 
+    opens up exciting opportunities at all layers of the systems stack, 
+    such high IO bandwidths make it even more challenging to offer strict IO memory protection. 
+Unsurprisingly, real-world deployments are forced to make the undesirable tradeoff: 
+    high performance or weaker (or even no) IO memory protection. This state of affairs is sad. 
+
+We present {\vfreename}, a simple modification to existing IO memory protection mechanisms 
+    that makes strict IO memory protection feasible in virtualized environments. 
+The key driving principle in {\vfreename} may be counter-intuitive: 
+    we demonstrate that, in virtualized environments, it is possible to minimize the overheads 
+    of strict IO memory protection by \textit{increasing} the cost of IOVA-to-physical address translation. 
+    This is in sharp contrast to the bare metal context: recent work on F\&S~\cite{Rubin2024FastSafe} 
+    achieves near-zero cost for strict IO memory protection in bare metal context by explicitly 
+    reducing the cost of address translation. 
+This dichotomy is obvious in the hindsight: in the bare metal case, address translation 
+    can take as much as four sequential memory accesses during the IOPT walk (4$\times$ the data transfer 
+    time for a page worth of data with 400Gbps IO bandwidth) 
+    and is thus the primary performance bottleneck; in virtualized environments, 
+    the unavoidable VM exit becomes the primary performance bottleneck often taking 17-42$\times$ 
+    longer than the worst-case address translation time. 
+{\vfreename} reduces the number of VM exits by explicitly increasing the cost of address translation. 
+
+{\vfreename} realizes the above principle using the key idea of \textit{one-for-many invalidations}. 
+Recall that, to maintain strict IO memory protection, two actions must be performed upon each DMA: 
+(1) unmapping the guest IOPT entries (which can be done without hypervisor intervention); 
+and (2) synchronously invalidating IOMMU cache entries corresponding to the IOVA used in that DMA. 
+Each invalidation request invalidates exactly one entry in the IOMMU primary cache 
+    (referred to as IO translation lookaside buffer, or IOTLB) 
+    and may additionally invalidate one entry corresponding to each level of the IOPT other IOMMU caches 
+    (referred to as IO page walk caches, or IOPWC)~\cite{Rubin2024FastSafe}. 
+This is to ensure that IOMMU cache entries for all other IOVAs are not impacted 
+    and can be used to speed up address translations for all other IOVAs. 
+The one-for-many invalidations in {\vfreename} design, as we discuss below, 
+    forces all IOMMU caches (including both IOTLB and IOPWC) 
+    for a VM to be invalidated for each invalidation request; 
+    thus, the state of the caches after one invalidation request will be ``worse'' 
+    than what it would be if multiple invalidation requests would have been executed---subsequent 
+    address translations may now require a full IOPT walk increasing translation overheads. 
+    However, the one-for-many invalidations in {\vfreename} design will opportunistically execute one 
+    invalidation request for many outstanding invalidation requests, 
+    resulting in much fewer invalidation requests (and thus, much fewer VM exits) than existing IO memory protection mechanisms.
+
+Specifically, in existing systems, a guest kernel thread executes the above two operations synchronously: it unmaps IOPT entries, prepares an invalidation request, submits the invalidation request to the emulated IOMMU invalidation queue, and rings a ``doorbell''---it writes to a certain register, which traps to the hypervisor; the hypervisor then executes the invalidation request on physical IOMMU and sends a completion signal to the guest. During this process, the guest kernel thread that initiated this invalidation request---and importantly, all other vCPUs that need to execute their own unmap and invalidation requests---must block on the completion signal. {\vfreename} enables a fast path{\footnote{The slow path still requires all vCPUs to block, \textit{e.g.}, for the extremely rare case of devices being concurrently attached or detached from a so-called IO domain, a protection context that groups one or more IO devices sharing an IO virtual address space.; we discuss details in \S\ref{vfree:sec:design}.}} where all vCPUs within a VM can execute unmapping of their respective IOPT entries, prepare their respective invalidation requests, and then block (without submitting their invalidation requests). As a result, across vCPUs, we can now have multiple outstanding invalidation requests---as many as the number of vCPUs for the interesting case of high network load. A dedicated vCPU collects all invalidation requests from all vCPUs and submits \textit{one of the invalidation requests along with a certain flag described below}, rings the doorbell, and then polls on the completion signal (and repeats the process upon receiving the completion signal). The flag indicates to the hypervisor that all IOMMU caches corresponding to the VM must be flushed during the invalidation process (rather than simply invalidating the address translation entry in the invalidation request). Thus, one-for-many invalidations executes only one invalidation request for all outstanding invalidation requests, opportunistically reducing the number of VM exits.  
+% Note that the one-for-many invalidations idea does \textit{not} increase the waiting time for any invalidation request compared to original vIOMMU; in fact, we show that {\vfreename} reduces the time window between unmapping of IOPT entries and invalidation of corresponding entries from IOMMU caches. \saksham{Also once we're done talking about one-to-many invalidations, we dont connect it back to VM exits getting reduced. But rather suddenly mention that we reduce the waiting time for any invalidation request compared to vIOMMU; I think so far we never talked about this waiting time explicitly.}
+
+{\vfreename} incorporates a second idea of \textit{deferred free page} that further reinforces one-for-many invalidations while maintaining strict protection. While one-for-many invalidations enable multiple vCPUs in the VM to concurrently create invalidation requests in the fast path, these vCPUs must still block on the completion signal after their invalidation request has been submitted. This is because, for strict IO memory protection, the IOVA and the physical page must be released for future use only after the invalidation has completed~\cite{Amit2011vIOMMU, malka2015efficient, Markuze2016true, markuze2018damn, RajapakshaIOMMU}. To that end, the deferred free page idea ensures that free IOVA and free page operations \textit{for all outstanding invalidation requests} are executed only upon receiving the completion signal. To achieve this, {\vfreename} introduces a new callback-based interface in the IOMMU subsystem, allowing IO device drivers to pass a callback function that delays physical memory cleanup until invalidation completion signal is received. With deferred free page, the vCPUs can proceed immediately without waiting for the invalidation to complete while still preserving strict IO memory protection. This results in even more outstanding requests available to one-for-many invalidations, further reducing the number of VM exits and further reducing the overheads, while maintaining strict IO memory protection. 
+% \saksham{We start talking about the two key ideas by saying "vFree realizes above principle by two key ideas", and the principle above is "Free reduces the number of VM exits by explicitly increasing the cost of address translation." Now while I agree that one-for-many invalidations is realizing the principle, but am not sure if DFP is doing the same? One common goal that both design ideas seem to be achieving is reducing the number of VM exits; and giving up translation cost to get reduced VM exits via one-to-many invalidations seems to be the first idea itself.} \saksham{Siyuan: With one-for-many, one producer thread can only generate at most IR per round of IR-SUB operations, so our performance is essentially bounded by \# of active thread * IR-SUB rate. With DFP, one producer can generate multiple IRs per round of IR-SUB, unleashes performance. Why this is possible with DFP? because DFP doesn't wait for its invalidation to be finished.}
+
+We implement \vfreebrand on Linux v6.12.9 with $\sim$1.5K lines of C code (350 in the device driver), 
+    and evaluate it on three widely used real-world applications---NGINX (a web server), 
+    Redis (an in-memory key-value store), and SPDK (a userspace storage stack that uses Linux TCP for remote storage). 
+Our evaluation results show that {\vfreename} consistently achieves performance within 1--8$\%$ 
+    of the unprotected system---74--147$\times$ higher than state-of-the-art IO memory protection mechanisms. 
+    The overheads of achieving these benefits is one dedicated core; 
+    {\vfreename} thus expands the choices of real-world systems: high performance 
+    but with weak (or no) IO memory protection, abysmal performance with underutilized cores with strict IO memory protection, 
+    or, high performance with one dedicated core with strict IO memory protection. 

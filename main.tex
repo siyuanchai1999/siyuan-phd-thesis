@@ -4,7 +4,7 @@
     pdfstandard=ua-2,
     tagging=on,
     tagging-setup={
-        math/setup={mathml-AF,mathml-SE},
+        math/setup={mathml-SE},
         extra-modules={verbatim-mo},
         table/tagging=false,
     }
@@ -50,6 +50,8 @@
 \addbibresource{./references.bib}
 \addbibresource{./emt/biblio.bib}
 \addbibresource{./emt/references.bib}
+\addbibresource{./vFree/ref.bib}
+\addbibresource{./pytorch-uvm/ref.bib}
 
 % EMT chapter packages
 \input{emt/emt_packages}
@@ -65,8 +67,12 @@
 % Raggedright is recommended for accessibility
 \raggedright
 \setlength{\parindent}{1.5em}
-
-\title{Coffee Consumption Among Graduate Students Writing Dissertations}
+\title{Mind the Gap: System Software Redesign for Modern Memory Hardware}
+\title{Memory Management Reimagined: From CPU Translation to I/O Protection and GPU Memory}
+\title{Rethinking Memory Management: CPU Translation, I/O Protection, and GPU Memory for Modern Systems}
+\title{Memory Unbound: System Software for Modern CPU, I/O, and GPU Memory}
+\title{Memory Management Reimagined: CPU, I/O, and GPU Memory for Modern Hardware and Workloads}
+\title{Rethinking Memory Management:  CPU, I/O, and GPU Memory for Modern Systems}
 \author{Siyuan Chai}
 \department{Computer Science}
 
@@ -107,11 +113,39 @@
 \maketitle
 
 \abstract{
-    The abstract must be placed immediately after the title page. 
-    There is no word limit for the abstract. 
-    No images or footnotes should appear in the abstract.
+Memory is the central resource of modern computing systems, yet the system software layers
+that manage it---conceived for simpler, uniform hardware---have failed to keep pace with the
+radical evolution of hardware and workloads.
+This dissertation identifies three critical manifestations of this mismatch.
+First, commodity OS kernels remain hardwired to radix-tree page tables, blocking
+experimentation with new translation architectures on terabyte-scale servers.
+Second, strict I/O memory protection in virtualized environments incurs 83--95\% throughput
+degradation from per-DMA VM exits, forcing production deployments to disable it entirely.
+Third, GPU memory oversubscription for AI workloads is unsolved: CUDA Unified Virtual Memory
+(UVM) is more than 5$\times$ slower than manual offloading, forcing each framework to implement its own.
+
+This dissertation argues that these bottlenecks arise not from hardware limitations but from
+system software layers designed without awareness of the hardware they manage or the workloads
+they serve, and that targeted changes to those layers alone suffice to close the gap.
+
+We present three systems.
+\emph{Extensible Memory Translation (EMT)} gives Linux an architecture-neutral interface for
+memory translation, enabling OS support for diverse hardware translation schemes---including
+hash-table-based and flat page table designs---without modifying the kernel for each architecture.
+\emph{Virtually Free} redesigns the Linux IOMMU invalidation protocol using one-for-many
+invalidations and deferred page freeing to amortize VM exit costs, achieving performance within
+1--8\% of an unprotected system---74--147$\times$ better than the state of the art---while
+preserving strict security guarantees.
+\emph{PyTorch-UVM} integrates a UVM-aware caching allocator and discard-based eviction directly
+into PyTorch, enabling practical GPU memory oversubscription for LLM inference without modifying
+application code.
+
+Together, these systems demonstrate that making system software layers hardware- and
+workload-aware---through targeted changes---eliminates bottlenecks in performance,
+security, and extensibility.
 }
 
+\input{macro.tex}
 \acknowledgements{
     TODO: Thank everyone who helped you with your research and PhD life.
 }
@@ -119,7 +153,7 @@
 % dedication uses begin and end syntax because it opens a center environment
 % which needs to be closed
 \begin{dedication}
-    A dedication is optional.
+    To the journey of discovery and the pursuit of knowledge.
 \end{dedication}
 
 \tableofcontents
@@ -132,6 +166,8 @@
 
 \input{introduction}
 \input{emt_main}
+\input{vfree_main}
+\input{pytorch_uvm_main}
 % Coffee extraction occurs when hot water is poured over coffee grounds, causing
 % desirable compounds such as caffeine, carbohydrates, lipids, melanoidins and
 % acids to be extracted from the grounds.

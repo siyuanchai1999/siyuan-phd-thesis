@@ -1,0 +1,27 @@
+\section{PyTorch-UVM: Practical Unified Virtual Memory for Large Language Model Inference}
+\label{chp:uvmtorch}
+
+\graphicspath{{pytorch-uvm/}}
+
+% Paper-specific commands
+\newcommand{\uvmname}{PyTorch-UVM}
+\providecommand{\CodeIn}[1]{{\small\texttt{#1}}}
+\providecommand{\Description}[1]{}
+\providecommand*\BC[1]{\begin{tikzpicture}[baseline=(C.base)]%
+    \node[draw,circle,fill=black,inner sep=0.1pt](C){\textcolor{white}{#1}};%
+    \end{tikzpicture}}
+
+\input{pytorch-uvm/macro}
+
+\tagpdfsetup{para/tagging=false}
+
+\input{pytorch-uvm/sections/01_Introduction}
+\input{pytorch-uvm/sections/02_Background}
+\input{pytorch-uvm/sections/Inefficiencies}
+\input{pytorch-uvm/sections/04_Design}
+\input{pytorch-uvm/sections/05_Implementation}
+\input{pytorch-uvm/sections/06_Evaluation}
+\input{pytorch-uvm/sections/related}
+\input{pytorch-uvm/sections/07_Conclusion}
+
+\tagpdfsetup{para/tagging=true}
