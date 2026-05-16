@@ -1,194 +1,267 @@
 \section{Introduction}
 \label{chp:intro}
 
-\subsection{The Problems}
+\subsection{The Modern Computing Stack: Rich Hardware, Aging Foundations}
 
-% Memory is the central resource of modern computing systems.
-% % TODO phrase next sentence better
-% Every workloads ultimately reads and writes memory;
-% every hardware advance in processors, accelerators, and interconnects must be reflected in
-% how the software stack manages, protects, and translates memory.
-% Yet, the OS and system software layers that manage memory are among the oldest and most
-% hardwired components of a modern computing stack.
+Computing has undergone a quiet revolution.
+A modern datacenter is no longer a warehouse of identical servers running batch jobs;
+it is a heterogeneous fabric of CPUs, GPUs, accelerators, smart NICs, and disaggregated
+memory pools, knitted together by hundred-gigabit network interconnects and shared by millions of
+tenants.
+% A single rack today carries more compute, memory, and bandwidth than an entire datacenter
+% of a decade ago.
+A single AI training job marshals tens of thousands of GPUs across hundreds of hosts to
+fit a model whose parameter count has grown by orders of magnitude in five years~\cite{llama3}.
+A single network interface card now moves data fast enough to saturate a DRAM channel
+of the machine that hosts it~\cite{connectx7}.
 
-% They were designed for a world of megabytes of DRAM, single-socket servers, and batch workloads.
-% Today's systems look nothing like that world:
-% cloud servers carry terabytes of memory,
-% and virtual machines host DMA-capable devices run with hundreds of gigabits of interconnect bandwidth,
-% and AI workloads powered by tens of billions of parameters require tens of gigabytes of GPU memory.
-Memory is the central resource of modern computing systems.
-Every workload ultimately lives in memory,
-yet the software memory management systems
-have failed to keep pace with the radical evolution of hardware and workloads.
-The underlying OS primitives for address translation,
-IO protection,
-and device memory
-were conceived for machines with scarce memory—
-an era where memory was a simple, local, and uniform resource.
+This transformation has been driven, almost entirely, by hardware.
+Process scaling slowed but did not stop;
+specialization filled the gap.
+Server DRAM capacity climbed from gigabytes to terabytes per socket.
 
-Today's systems look nothing like that world.
-Cloud servers carry terabytes of memory,
-virtual machines must safely manage DMA-capable devices at hundred-gigabit throughput,
-and AI workloads powered by tens of billions of parameters require tens of gigabytes of GPU memory.
+GPUs evolved from graphics coprocessors into the dominant compute substrate for
+artificial intelligence, with on-package high-bandwidth memory and cache-coherent
+interconnects such as NVLink-C2C.
+DMA-capable devices---NICs, NVMe drives, accelerators---now move data at hundreds
+of gigabits per second, often without ever involving the CPU.
+The result is a hardware platform of breathtaking capability and diversity:
+the modern computing stack is awash in compute, memory, and bandwidth.
 
-By forcing these extreme demands through rigid, legacy software designs,
-modern systems have turned memory management
-into a significant bottleneck of performance, security, and extensibility.
-% This dissertation argues that memory management system---the software machinery responsible for
-% mapping and protecting virtual memory---is the critical gap between
-% where hardware capabilities now stand and where application performance can actually go.
-The bottleneck manifests in three distinct but related problems: 
-spanning across CPU memory to I/O memory and device memory.
+Yet, the \emph{system software} layers that manage this hardware---chiefly the
+operating system kernel, together with the hypervisor, device drivers, and
+AI frameworks that sit alongside it---have not kept pace.
+The kernel's memory management subsystem, IOMMU subsystem, and the
+device memory management system were each conceived for a world that no longer exists:
+servers with limited memory capacity,
+device interconnects orders of magnitude slower than today's,
+and accelerators with dedicated memory large enough to hold the entire working set.
+Their core abstractions---the radix-tree page table, the synchronous IOTLB invalidation,
+the application-opaque managed-memory pool---were correct and general for the hardware of their day.
+At today's scale and speed, they have become the bottleneck.
+
+\subsection{Memory at the Center}
+
+Of all the resources system software manages, memory is the one that ties the
+modern stack together.
+Every workload, on every device, ultimately reads and writes memory:
+a CPU thread chases pointers through a terabyte heap;
+a NIC streams packets directly into guest physical memory;
+a GPU kernel sweeps tensors that no longer fit in on-package HBM.
+Every hardware advance---in processors, accelerators, interconnects, or memory
+technology itself---must eventually be reflected in how the software stack
+\emph{maps}, \emph{protects}, and \emph{moves} memory on behalf of those workloads.
+Memory is the join point between hardware capability and application performance.
+
+It is also the join point at which the system-software gap is most visible.
+Three forces compound the pressure on memory management.
+First, capacities have grown faster than translation hardware can absorb:
+a TLB that comfortably covered a working set in 2005 now covers a vanishing
+fraction of a terabyte-scale heap.
+Second, devices have become first-class memory consumers:
+a single 400\,Gbps NIC can issue more DMA operations per second than a CPU
+can issue page faults, and each one must be mediated for safety.
+Third, accelerator memory has become the bottleneck for entire classes of workloads:
+flagship AI models now exceed the memory of any single GPU, and the cost of moving
+data on and off the device dominates end-to-end latency.
+In each case, the limiting factor is not the underlying hardware---which is fast,
+plentiful, and getting faster---but the software layer that stands between the
+hardware and the workload.
+
+\subsection{The System Software Gap}
+
+This dissertation argues that the most consequential bottlenecks in modern memory
+systems are not bottlenecks of \emph{hardware}, but of \emph{system software}:
+specifically, of OS and runtime abstractions designed without the hardware
+or workloads they now face, and not extensible enough to absorb the mismatch
+gracefully.
+The cost of the mismatch is paid in three currencies:
+\textbf{performance}, when software overhead consumes the headroom that new
+hardware provides;
+\textbf{security}, when production systems are forced to disable expensive
+protection mechanisms to remain usable;
+and \textbf{extensibility}, when hardwired software designs prevent the deployment
+of new hardware ideas, slowing the broader research and development cycle.
+Across the stack---from CPU virtual memory, to I/O memory protection, to GPU
+device memory---the same pattern recurs:
+a mature, widely deployed abstraction that was once correct and general now
+exposes a semantic gap between what the hardware can do and what the workload
+needs.
+
+This dissertation studies that gap in three concrete settings, each chosen
+because it is both representative of the broader pattern and important in its
+own right:
+CPU virtual memory translation in the OS kernel,
+I/O memory protection in the OS kernel (specifically, the guest kernel's IOMMU
+subsystem, in concert with the host kernel and hypervisor),
+and the GPU memory management system.
+In each setting, we identify the specific invariant that the legacy abstraction
+enforces unnecessarily, redesign the software layer around that finding, and
+show that targeted, hardware- and workload-aware system-software changes are
+sufficient to close the gap---without modifying the hardware, and without
+abandoning the existing stack.
+
+\subsection{Three Manifestations of the Gap}
+
+The bottleneck manifests in three distinct but related problems,
+spanning CPU memory, I/O memory, and device memory:
+
 \begin{enumerate}
 \item \textbf{CPU virtual memory translation} has become a major bottleneck for
-    memory-intensive workloads on terabyte-scale servers, yet commodity OS kernels
-    remain hardwired to a single translation architecture---the radix-tree page table---and
-    provide no extensible interface to experiment alternatives designs.
-    The difficulties of building OS support has discouraged disruptive architecture research.
+    memory-intensive workloads on terabyte-scale servers.
+    Address translation can consume 20--50\% of execution time on big-memory
+    workloads, and a substantial body of computer-architecture research has
+    proposed faster translation schemes---hash-based, flat, or hybrid---that
+    promise to recover much of this overhead.
+    Yet commodity OS kernels remain hardwired to a single translation
+    architecture, the radix-tree page table, and provide no extensible interface
+    to experiment with alternative designs.
+    The difficulty of building OS support has, in turn, discouraged disruptive
+    architecture research: hardware proposals are evaluated almost entirely in
+    simulation, under the assumption that OS overhead is constant across
+    translation architectures---an assumption we show to be false.
 
-\item \textbf{I/O memory protection in virtualized environments} is prohibitively expensive.
-    Existing IO memory protection mechanisms offer powerful, so-called strict, safety guarantees; 
-    however, they require at least one VM exit per DMA in virtualized environments 
-    to invalidate translation entries in IOMMU caches. 
-    The VM exits result in 83--95$\%$ application-level throughput degradation ---
-    a penalty so severe that production deployments universally disable strict protection, leaving
-    them vulnerable to security risks.
-    % today forgo protection entirely and accept the associated security risk.
+\item \textbf{I/O memory protection in virtualized environments} is prohibitively
+    expensive.
+    In modern clouds, virtual machines are routinely granted direct access to
+    high-performance devices, but allowing a guest-controlled device direct
+    access to physical memory poses severe intra-guest security risks.
+    Existing IOMMU mechanisms offer a strong, ``strict,'' safety guarantee that
+    purges stale device translations immediately after each DMA;
+    however, in virtualized environments, enforcing this guarantee requires at
+    least one VM exit per DMA to invalidate translation entries in IOMMU caches.
+    The resulting overhead is staggering: 83--95\% application throughput
+    degradation---a penalty so severe that production deployments universally
+    disable strict protection, leaving them vulnerable to known attack classes.
+    Cloud operators are thus forced into a choice between performance and
+    security that the hardware itself does not require.
 
-\item \textbf{GPU memory oversubscription for memory-intensive AI workloads}  
-    is achieved by each framework implementing its own complex, application-specific offloading.
-    CUDA Unified Virtual Memory (UVM) offers a driver-level transparent alternative,
-    but is considered too slow for production,
-    because the runtime has no visibility into high-level access patterns.
-    % too slow, because the runtime has no visibility into high-level access patterns.
+\item \textbf{GPU memory oversubscription for memory-intensive AI workloads}
+    has become an existential issue for the AI software stack.
+    Flagship model sizes grow faster than GPU memory capacity, and the dominant
+    response has been for each AI framework to implement its own complex,
+    application-specific offloading logic---hand-written code paths for
+    KV-cache eviction, parameter swapping, and activation rematerialization,
+    re-implemented across PyTorch, vLLM, DeepSpeed, and others.
+    The CUDA runtime offers a transparent, driver-level alternative---Unified
+    Virtual Memory (UVM)---but it is widely considered impractical for
+    production: prior work reports it is more than 5$\times$ slower than
+    application-level offloading, because the runtime has no visibility into
+    high-level access patterns and the framework's caching allocator actively
+    fights it.
 \end{enumerate}
+
+These three problems span very different parts of the stack---a kernel data
+structure, a kernel-level invalidation protocol that spans guest and host,
+and a GPU memory management system---but they share a common shape.
+In each, modern hardware exposes a capability that the workload demands;
+in each, a legacy software abstraction prevents the workload from using it;
+and in each, the cost of the mismatch is paid in performance, security, or
+the engineering effort required to work around the abstraction.
 
 \subsection{Thesis Statement}
 
-Modern memory systems require transformation to meet the demands of contemporary hardware and workloads; making the system software layers aware of both eliminates the bottlenecks of performance, security, and extensibility that arise from legacy designs.
+\noindent\emph{Modern memory systems require transformation to meet the demands
+of contemporary hardware and workloads; making the system software layers aware
+of both---through targeted, surgical changes---eliminates the bottlenecks of
+performance, security, and extensibility that arise from legacy designs.}
 
-% Each problem stems from the same root cause:
-% the existing OS or runtime abstraction was designed without the hardware
-% or workload it now faces, and neither the interface nor the implementation
-% is extensible enough to absorb the mismatch gracefully.
-% In each case, the cost is paid in performance, security, or engineering complexity.
+\subsection{Approach: Three Systems}
 
-% This dissertation addresses each problem with a system that introduces
-% a targeted OS/system-level mechanism to close the gap---not by
-% bypassing the existing stack, but by making it aware of the hardware
-% and workload characteristics it was missing.
+This dissertation supports the thesis with three systems, each addressing one of
+the manifestations described above.
+Each system retains the surrounding stack---the OS kernel, the virtualization
+stack it participates in, or the GPU memory management system---but adds a thin
+layer of awareness that closes the gap between the abstraction and the underlying
+hardware or workload.
 
 \paragraph{EMT: An OS Framework for New Memory Translation Architectures.}
-The first problem---hardwired radix-tree translation in Linux---blocks researchers and
-hardware designers from experimenting with new translation architectures.
+The first problem---hardwired radix-tree translation in Linux---blocks
+researchers and hardware designers from experimenting with new translation
+architectures.
 New schemes such as hash-table-based ECPT~\cite{skarlatos2020ecpt} and
 flat FPT~\cite{park2022fpt} have been shown to reduce translation overhead
 significantly in simulation, but almost no proposals have ever run on a commodity OS.
-Without OS experiments, hardware research relies on performance models that assume OS overhead
-is constant across translation architectures---an assumption we show to be false.
+Without OS experiments, hardware research relies on performance models that
+assume OS overhead is constant across translation architectures---an assumption
+we show to be false.
 
-We present \emph{Extensible Memory Translation (EMT)}, a pragmatic framework atop Linux to empower
-    different hardware schemes of memory translation 
-    such as radix tree and hash table.
-% termed Extensible Memory Translation (EMT).
+We present \emph{Extensible Memory Translation (EMT)}, a pragmatic framework
+atop Linux to empower different hardware schemes of memory translation
+such as radix tree and hash table.
 EMT provides an architecture-neutral interface that
-    1) supports diverse memory translation architectures,
-    2) enables hardware-specific optimizations,
-    3) accommodates modern hardware and OS complexity,
-%    3) support modern memory management features, % like huge pages and page-table isolation,
-    and 4) has negligible overhead over hardwired implementations. 
-% With EMT, new hardware translation schemes can be effectively
-%    supported.
-We port Linux's memory management onto EMT and show that 
-    EMT enables extensibility without sacrificing performance.
-We use EMT to implement OS support for ECPT and FPT, two recent experimental translation 
-    schemes for fast translation;
+1) supports diverse memory translation architectures,
+2) enables hardware-specific optimizations,
+3) accommodates modern hardware and OS complexity,
+and 4) has negligible overhead over hardwired implementations.
+We port Linux's memory management onto EMT and show that
+EMT enables extensibility without sacrificing performance.
+We use EMT to implement OS support for ECPT and FPT, two recent experimental
+translation schemes for fast translation;
 EMT enables us to understand the OS perspective of these architectures
-    and further optimize their designs.
+and further optimize their designs.
 
 \paragraph{Virtually Free: Making Strict IO Memory Protection Feasible for Virtualized Environments.}
 The second problem concerns IO memory protection in virtualized environments.
 Device pass-through delivers near-native I/O performance to virtual machines,
-but allowing a guest-controlled device direct access to physical memory poses severe
-intra-guest security risks.
-Virtualized IOMMUs (vIOMMUs) address this by exposing a virtual IOMMU to the guest,
-enabling fine-grained DMA protection.
+but allowing a guest-controlled device direct access to physical memory poses
+severe intra-guest security risks.
+Virtualized IOMMUs (vIOMMUs) address this by exposing a virtual IOMMU to the
+guest, enabling fine-grained DMA protection.
 However, enforcing the highest level of protection---\emph{strict} invalidation,
 which purges IOTLB entries immediately after each DMA---requires
 a synchronous VM exit per unmap in current hardware-assisted designs.
 A VM exit costs 10--20\,$\mu$s; a bare-metal IOTLB invalidation costs 200--300\,ns.
-The result is 83--95\% application throughput degradation---a penalty so severe that
-production deployments universally disable strict protection.
+The result is 83--95\% application throughput degradation---a penalty so severe
+that production deployments universally disable strict protection.
 
-We present {\vFreebrand} a simple modification to existing IO memory protection mechanisms 
-    that makes strict IO memory protection feasible in virtualized environments. 
-The key insight in {\vFreebrand} is that, in virtualized environments, 
-    it is possible to reduce the overheads of strict IO memory protection 
-    to a bare minimum by \textit{increasing} the cost of address translation. 
-Intuitively, this is because each VM exit has much higher cost 
-    than the worst-case translation cost. 
-{\vFreebrand} design incorporates two ideas---\textit{one-for-many invalidations} and \textit{deferred free page}---that, 
-    when put together, result in higher address translation cost but significantly 
-    reduce the number of VM exits (and hence, IO memory protection overheads) 
-    while maintaining strict IO memory protection. 
-We implement {\vFreebrand} on Linux, and evaluate it across multiple real-world applications. 
-Our evaluation suggests that, at the cost of one dedicated core, 
-    {\vFreebrand} consistently achieves performance within 1--8$\%$ of 
-    the unprotected system---74--147$\times$ higher than state-of-the-art IO memory protection mechanisms.
-    % The key insight is that the current Linux IOMMU subsystem serializes all concurrent unmap
-% requests across cores on a global lock, compounding VM exit latency with lock contention.
-% Strict security requires only a per-thread ordering
-% (\emph{Unmap} $\to$ \emph{Invalidate} $\to$ \emph{Free}), not global serialization.
-% We introduce two mechanisms:
-% \emph{one-for-many invalidations}, which delegates IOTLB invalidation to a single core and
-% batches concurrent requests, eliminating redundant VM exits;
-% and \emph{Deferred Free Page (DFP)}, a callback-based interface that lets drivers delay
-% physical page reclamation until hardware invalidation is confirmed,
-% removing synchronous waits without relaxing the security invariant.
-% Together, these mechanisms achieve performance within 1--8\% of an unprotected system---a
-% 74--147$\times$ improvement over state-of-the-art strict vIOMMU---while maintaining the
-% same strict security guarantees.
+We present {\vFreebrand} a simple modification to existing IO memory protection
+mechanisms that makes strict IO memory protection feasible in virtualized environments.
+The key insight in {\vFreebrand} is that, in virtualized environments,
+it is possible to reduce the overheads of strict IO memory protection
+to a bare minimum by \textit{increasing} the cost of address translation.
+Intuitively, this is because each VM exit has much higher cost
+than the worst-case translation cost.
+{\vFreebrand} design incorporates two ideas---\textit{one-for-many invalidations}
+and \textit{deferred free page}---that, when put together, result in higher
+address translation cost but significantly reduce the number of VM exits
+(and hence, IO memory protection overheads) while maintaining strict IO memory protection.
+We implement {\vFreebrand} on Linux, and evaluate it across multiple real-world applications.
+Our evaluation suggests that, at the cost of one dedicated core,
+{\vFreebrand} consistently achieves performance within 1--8$\%$ of
+the unprotected system---74--147$\times$ higher than state-of-the-art IO memory protection mechanisms.
 
 \paragraph{PyTorch-UVM: Practical Unified Virtual Memory for Large Language Model Inference.}
 The third problem is GPU memory management for LLM inference.
 Flagship model sizes grow faster than GPU memory capacity,
-yet the transparent alternative provided by the CUDA driver---Unified Virtual Memory (UVM)---has
-been considered impractical for production: prior work reports UVM is more than
-5$\times$ slower than application-level offloading.
+yet the transparent alternative provided by the CUDA driver---Unified Virtual
+Memory (UVM)---has been considered impractical for production: prior work
+reports UVM is more than 5$\times$ slower than application-level offloading.
 The gap has two sources.
 First, ML frameworks like PyTorch bypass UVM with their own caching allocators,
 so managed allocations miss pooling and reuse optimizations.
 Second, the driver has no visibility into model execution order,
-so page faults and migrations are triggered late and often evict data that is about to be reused.
+so page faults and migrations are triggered late and often evict data that is
+about to be reused.
 
-
-% We present \emph{Pytorch-UVM}, an application-aware UVM substrate
-% integrated directly into PyTorch.
-% Pytorch-UVM contributes three mechanisms.
-% A \emph{UVM-aware caching allocator} proactively returns cached tensors to the driver
-% when the GPU is oversubscribed, preventing the OOM kills that naive UVM caching suffers.
-% \emph{Discard-based eviction} marks cached blocks as reclaimable without copying
-% their data back to host memory, cutting eviction cost.
-% For workloads where the active working set substantially exceeds GPU memory,
-% we study \emph{direct CPU-memory access} and
-% \emph{access-counter-based migration} to break the eviction--re-fault cycle.
 We present {\pytorchUVMbrand}, an application-aware UVM substrate for PyTorch
-    that closes this gap without changing model code.
+that closes this gap without changing model code.
 {\pytorchUVMbrand} contributes (1) a \emph{UVM-aware caching allocator}
-    that proactively returns cached memory to the driver under oversubscription,
-    avoiding the OOM kills that naive UVM caching suffers,
-    and (2) \emph{discard-based eviction},
-    which marks cached blocks as reclaimable without copying data back to host.
+that proactively returns cached memory to the driver under oversubscription,
+avoiding the OOM kills that naive UVM caching suffers,
+and (2) \emph{discard-based eviction},
+which marks cached blocks as reclaimable without copying data back to host.
 We evaluate on Hugging~Face OPT and Qwen inference workloads
-    across A100-PCIe, H100-PCIe, and GH200 NVLink-C2C.
+across A100-PCIe, H100-PCIe, and GH200 NVLink-C2C.
 When memory is not oversubscribed, {\pytorchUVMbrand} matches PyTorch's native
-    \texttt{cudaMalloc}-based allocator within $20\%$.
+\texttt{cudaMalloc}-based allocator within $20\%$.
 Under oversubscription, where the native allocator crashes with OOM,
-    {\pytorchUVMbrand} is $45\times$--$58\times$ faster than default UVM
-    and $27\times$--$35\times$ faster than HF KV-cache offloading.
+{\pytorchUVMbrand} is $45\times$--$58\times$ faster than default UVM
+and $27\times$--$35\times$ faster than HF KV-cache offloading.
 At high oversubscription, performance narrows to $1.6\times$--$1.7\times$ over default UVM.
 
-\paragraph{Summary of Contributions.}
+\subsection{Summary of Contributions}
+
 This dissertation makes the following contributions:
 
 \begin{itemize}
@@ -200,7 +273,7 @@ This dissertation makes the following contributions:
 
     \item \textbf{Virtually Free} (\emph{Virtually Free: Making Strict IO Memory Protection
         Feasible for Virtualized Environments}):
-        A redesign of the Linux IOMMU subsystem that 
+        A redesign of the Linux IOMMU subsystem that
         makes strict I/O memory protection feasible in virtualized environments for
         the first time without sacrificing throughput.
 
@@ -209,13 +282,15 @@ This dissertation makes the following contributions:
         An application-aware UVM integration for PyTorch that
         enables practical GPU memory oversubscription for LLM inference without changing application code.
 
-    \item A unifying perspective: across all three systems, the bottleneck is not the
-        hardware itself but the OS or runtime abstraction layer that sits between hardware
-        capabilities and application demands.
-        Together, these systems demonstrate that making system software layers hardware- and
-        workload-aware---through targeted changes---eliminates bottlenecks in performance,
-        security, and extensibility.
+    \item \textbf{A unifying perspective.} Across all three systems, the bottleneck is
+        not the hardware itself but the OS or runtime abstraction layer that sits between
+        hardware capabilities and application demands.
+        Together, these systems demonstrate that making system software layers hardware-
+        and workload-aware---through targeted changes---eliminates bottlenecks in
+        performance, security, and extensibility.
 \end{itemize}
+
+\subsection{Dissertation Roadmap}
 
 The remainder of this dissertation is organized as follows.
 Chapter~\ref{chp:emt} presents EMT and its evaluation on new translation architectures.
