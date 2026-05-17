@@ -3,32 +3,41 @@
 
 \subsection{The Modern Computing Stack: Rich Hardware, Aging Foundations}
 
-Computing has undergone a quiet revolution.
-A modern datacenter is no longer a warehouse of identical servers running batch jobs;
-it is a heterogeneous fabric of CPUs, GPUs, accelerators, smart NICs, and disaggregated
-memory pools, knitted together by hundred-gigabit network interconnects and shared by millions of
-tenants.
-% A single rack today carries more compute, memory, and bandwidth than an entire datacenter
-% of a decade ago.
-A single AI training job marshals tens of thousands of GPUs across hundreds of hosts to
-fit a model whose parameter count has grown by orders of magnitude in five years~\cite{llama3}.
-A single network interface card now moves data fast enough to saturate a DRAM channel
-of the machine that hosts it~\cite{connectx7}.
+Modern computing bears little resemblance to that of a decade ago.
+A modern datacenter is no longer a warehouse of identical servers running batch
+jobs; it is a heterogeneous fabric of CPUs, GPUs, accelerators, smart NICs, and
+disaggregated memory pools, knitted together by hundred-gigabit interconnects
+and shared by millions of tenants.
+Server DRAM has grown from gigabytes to terabytes per socket;
+GPUs, once graphics coprocessors, have become the dominant substrate for AI,
+linked by cache-coherent interconnects such as NVLink-C2C\@;
+and DMA-capable devices---NICs, NVMe drives, accelerators---now move data at
+hundreds of gigabits per second without ever involving the CPU\@.
 
-This transformation has been driven, almost entirely, by hardware.
-Process scaling slowed but did not stop;
-specialization filled the gap.
-Server DRAM capacity climbed from gigabytes to terabytes per socket.
+In parallel with the hardware evolution,
+workloads have also grown in scale and complexity.
+In memory databases,
+can easily generate a memory working set of hundreds of terabytes~\cite{redis},
+putting greater pressure on memory management and address translation.
+Network-intensive applications in virtualized clouds issue DMA at rates that
+saturate a DRAM channel of the host~\cite{connectx7},
+putting relentless pressure on the OS IOMMU subsystem that mediates every device access.
+A single LLM training run marshals tens of thousands of GPUs across hundreds of
+hosts to fit a model whose parameter count has grown by orders of magnitude in
+five years~\cite{llama3}; 
 
-GPUs evolved from graphics coprocessors into the dominant compute substrate for
-artificial intelligence, with on-package high-bandwidth memory and cache-coherent
-interconnects such as NVLink-C2C.
-DMA-capable devices---NICs, NVMe drives, accelerators---now move data at hundreds
-of gigabits per second, often without ever involving the CPU.
-The result is a hardware platform of breathtaking capability and diversity:
-the modern computing stack is awash in compute, memory, and bandwidth.
+Across this hardware and workload landscape, memory is the central resource that ties the
+stack together.
+Every workload, on every device, ultimately reads and writes memory:
+a CPU thread chases pointers through a terabyte heap;
+a NIC streams packets directly into guest physical memory;
+a GPU kernels perform tensor computations by reading from and writing to device and host memory.
+Every hardware advance---in processors, accelerators, interconnects, or memory
+technology itself---must eventually be reflected in how the software stack
+\emph{maps}, \emph{protects}, and \emph{moves} memory on behalf of those workloads.
+Memory is the join point between hardware capability and application performance.
 
-Yet, the \emph{system software} layers that manage this hardware---chiefly the
+Yet, the \emph{system software} layers that manage this memory---chiefly the
 operating system kernel, together with the hypervisor, device drivers, and
 AI frameworks that sit alongside it---have not kept pace.
 The kernel's memory management subsystem, IOMMU subsystem, and the
@@ -40,41 +49,14 @@ Their core abstractions---the radix-tree page table, the synchronous IOTLB inval
 the application-opaque managed-memory pool---were correct and general for the hardware of their day.
 At today's scale and speed, they have become the bottleneck.
 
-\subsection{Memory at the Center}
-
-Of all the resources system software manages, memory is the one that ties the
-modern stack together.
-Every workload, on every device, ultimately reads and writes memory:
-a CPU thread chases pointers through a terabyte heap;
-a NIC streams packets directly into guest physical memory;
-a GPU kernel sweeps tensors that no longer fit in on-package HBM.
-Every hardware advance---in processors, accelerators, interconnects, or memory
-technology itself---must eventually be reflected in how the software stack
-\emph{maps}, \emph{protects}, and \emph{moves} memory on behalf of those workloads.
-Memory is the join point between hardware capability and application performance.
-
-It is also the join point at which the system-software gap is most visible.
-Three forces compound the pressure on memory management.
-First, capacities have grown faster than translation hardware can absorb:
-a TLB that comfortably covered a working set in 2005 now covers a vanishing
-fraction of a terabyte-scale heap.
-Second, devices have become first-class memory consumers:
-a single 400\,Gbps NIC can issue more DMA operations per second than a CPU
-can issue page faults, and each one must be mediated for safety.
-Third, accelerator memory has become the bottleneck for entire classes of workloads:
-flagship AI models now exceed the memory of any single GPU, and the cost of moving
-data on and off the device dominates end-to-end latency.
-In each case, the limiting factor is not the underlying hardware---which is fast,
-plentiful, and getting faster---but the software layer that stands between the
-hardware and the workload.
-
 \subsection{The System Software Gap}
 
 This dissertation argues that the most consequential bottlenecks in modern memory
-systems are not bottlenecks of \emph{hardware}, but of \emph{system software}:
+systems are \emph{system software}:
 specifically, of OS and runtime abstractions designed without the hardware
-or workloads they now face, and not extensible enough to absorb the mismatch
-gracefully.
+or workloads they now face.
+% , and not extensible enough to absorb the mismatch
+% gracefully.
 The cost of the mismatch is paid in three currencies:
 \textbf{performance}, when software overhead consumes the headroom that new
 hardware provides;
@@ -98,20 +80,20 @@ and the GPU memory management system.
 In each setting, we identify the specific invariant that the legacy abstraction
 enforces unnecessarily, redesign the software layer around that finding, and
 show that targeted, hardware- and workload-aware system-software changes are
-sufficient to close the gap---without modifying the hardware, and without
-abandoning the existing stack.
+sufficient to close the gap---without modifying the hardware, refactoring the applications, or
+abandoning the existing system stacks.
+% \subsection{Three Manifestations of the Gap}
 
-\subsection{Three Manifestations of the Gap}
-
-The bottleneck manifests in three distinct but related problems,
-spanning CPU memory, I/O memory, and device memory:
-
+% The bottleneck manifests in three distinct but related problems,
+% spanning CPU memory, I/O memory, and device memory:
 \begin{enumerate}
 \item \textbf{CPU virtual memory translation} has become a major bottleneck for
     memory-intensive workloads on terabyte-scale servers.
     Address translation can consume 20--50\% of execution time on big-memory
-    workloads, and a substantial body of computer-architecture research has
-    proposed faster translation schemes---hash-based, flat, or hybrid---that
+    workloads~\cite{basu2013efficient,gupta2021midgard,kwon2016coordinated,margaritov2019asap},
+    and a substantial body of computer-architecture research has
+    proposed faster translation schemes---hash-based~\cite{skarlatos2020ecpt,yaniv2016hash,jovan2022nestedecpt},
+    tree-based~\cite{park2022fpt}, or hybrid~\cite{alam2017doityourself,kanellopoulos2023utopia}---that
     promise to recover much of this overhead.
     Yet commodity OS kernels remain hardwired to a single translation
     architecture, the radix-tree page table, and provide no extensible interface
@@ -142,13 +124,19 @@ spanning CPU memory, I/O memory, and device memory:
     response has been for each AI framework to implement its own complex,
     application-specific offloading logic---hand-written code paths for
     KV-cache eviction, parameter swapping, and activation rematerialization,
-    re-implemented across PyTorch, vLLM, DeepSpeed, and others.
+    re-implemented across PyTorch~\cite{pytorch}, vLLM~\cite{vllm}, DeepSpeed~\cite{deepspeed}.
     The CUDA runtime offers a transparent, driver-level alternative---Unified
     Virtual Memory (UVM)---but it is widely considered impractical for
-    production: prior work reports it is more than 5$\times$ slower than
-    application-level offloading, because the runtime has no visibility into
-    high-level access patterns and the framework's caching allocator actively
-    fights it.
+    production.
+    Our measurements show that UVM is over 50$\times$ slower than PyTorch's
+    native \texttt{cudaMalloc}-based allocator when memory is not oversubscribed,
+    and over 5$\times$ slower than application-level offloading under
+    oversubscription (consistent with prior work~\cite{infinigen}).
+
+    % prior work reports it is more than 5$\times$ slower than
+    % application-level offloading~\cite{infinigen}, because the runtime has no visibility into
+    % high-level access patterns and the framework's caching allocator actively
+    % fights it.
 \end{enumerate}
 
 These three problems span very different parts of the stack---a kernel data
@@ -283,7 +271,7 @@ This dissertation makes the following contributions:
         enables practical GPU memory oversubscription for LLM inference without changing application code.
 
     \item \textbf{A unifying perspective.} Across all three systems, the bottleneck is
-        not the hardware itself but the OS or runtime abstraction layer that sits between
+        not the hardware itself but the software systems layer that sits between
         hardware capabilities and application demands.
         Together, these systems demonstrate that making system software layers hardware-
         and workload-aware---through targeted changes---eliminates bottlenecks in
@@ -293,9 +281,9 @@ This dissertation makes the following contributions:
 \subsection{Dissertation Roadmap}
 
 The remainder of this dissertation is organized as follows.
-Chapter~\ref{chp:emt} presents EMT and its evaluation on new translation architectures.
-Chapter~\ref{chp:viommu} presents the redesigned vIOMMU mechanism and its evaluation
+\ref{chp:emt} presents EMT and its evaluation on new translation architectures.
+\ref{chp:viommu} presents the redesigned vIOMMU mechanism and its evaluation
 on 400\,Gbps networking workloads.
-Chapter~\ref{chp:uvmtorch} presents UVMTorch and its evaluation on LLM inference across
-A100, H100, and GH200 hardware.
-Chapter~\ref{chp:conclusion} concludes and discusses future directions.
+\ref{chp:uvmtorch} presents Pytorch-UVM and its evaluation on LLM inference across
+PCIe-based and NVLink-C2C hardware.
+\ref{chp:conclusion} concludes and discusses future directions.

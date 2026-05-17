@@ -113,36 +113,48 @@
 \maketitle
 
 \abstract{
-Memory is the central resource of modern computing systems, yet the system software layers
-that manage it---conceived for simpler, uniform hardware---have failed to keep pace with the
-radical evolution of hardware and workloads.
-This dissertation identifies three critical manifestations of this mismatch.
-First, commodity OS kernels remain hardwired to radix-tree page tables, blocking
-experimentation with new translation architectures on terabyte-scale servers.
-Second, strict I/O memory protection in virtualized environments incurs 83--95\% throughput
-degradation from per-DMA VM exits, forcing production deployments to disable it entirely.
-Third, GPU memory oversubscription for AI workloads is unsolved: CUDA Unified Virtual Memory
-(UVM) is more than 5$\times$ slower than manual offloading, forcing each framework to implement its own.
+Modern computing bears little resemblance to that of a decade ago: datacenters
+are now heterogeneous fabrics of CPUs, GPUs, accelerators, and high-bandwidth
+interconnects, running workloads---LLM training, in-memory analytics,
+network intensive applications---that push the hardware to its limits.
+Memory is the central resource of this stack; every workload, on every device,
+ultimately reads and writes memory.
+Yet the system software layers that manage it---the OS kernel, the hypervisor,
+device drivers, and AI frameworks---were conceived for a world that no longer
+exists, and the cost of this mismatch is paid in performance, security, and
+extensibility.
 
-This dissertation argues that these bottlenecks arise not from hardware limitations but from
-system software layers designed without awareness of the hardware they manage or the workloads
-they serve, and that targeted changes to those layers alone suffice to close the gap.
+This dissertation identifies three concrete manifestations of the gap.
+First, commodity OS kernels remain hardwired to radix-tree page tables,
+blocking experimentation with new translation architectures that promise to
+recover much of the 20--50\% address-translation overhead on terabyte-scale
+servers.
+Second, strict I/O memory protection in virtualized environments incurs
+83--95\% throughput degradation from per-DMA VM exits, forcing production
+deployments to disable it entirely and accept the security risk.
+Third, CUDA Unified Virtual Memory (UVM) is over 50$\times$ slower than
+PyTorch's native \texttt{cudaMalloc}-based allocator when GPU memory is not
+oversubscribed, and over 5$\times$ slower than application-level offloading
+under oversubscription, forcing each AI framework to implement its own
+offloading logic.
 
-We present three systems.
-\emph{Extensible Memory Translation (EMT)} gives Linux an architecture-neutral interface for
-memory translation, enabling OS support for diverse hardware translation schemes---including
-hash-table-based and flat page table designs---without modifying the kernel for each architecture.
-\emph{Virtually Free} redesigns the Linux IOMMU invalidation protocol using one-for-many
-invalidations and deferred page freeing to amortize VM exit costs, achieving performance within
-1--8\% of an unprotected system---74--147$\times$ better than the state of the art---while
-preserving strict security guarantees.
-\emph{PyTorch-UVM} integrates a UVM-aware caching allocator and discard-based eviction directly
-into PyTorch, enabling practical GPU memory oversubscription for LLM inference without modifying
-application code.
+We address each with a targeted system.
+\emph{Extensible Memory Translation (EMT)} gives Linux an architecture-neutral
+interface for memory translation, enabling OS support for diverse hardware
+schemes---hash-table-based, flat, and hybrid---without modifying the kernel
+for each.
+\emph{Virtually Free} redesigns the Linux IOMMU invalidation protocol around
+one-for-many invalidations and deferred page freeing, achieving performance
+within 1--8\% of an unprotected system---74--147$\times$ better than the state
+of the art---while preserving strict security guarantees.
+\emph{PyTorch-UVM} integrates a UVM-aware caching allocator and discard-based
+eviction into PyTorch, enabling practical GPU memory oversubscription for LLM
+inference without modifying application code.
 
-Together, these systems demonstrate that making system software layers hardware- and
-workload-aware---through targeted changes---eliminates bottlenecks in performance,
-security, and extensibility.
+Together, these systems demonstrate that bottlenecks in modern memory
+management arise not from hardware limitations but from system software
+designed without awareness of the hardware and workloads it now serves, and
+that targeted changes to those software layers suffice to eliminate them.
 }
 
 \input{macro.tex}
