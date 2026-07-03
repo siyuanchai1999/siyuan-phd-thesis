@@ -1,76 +1,73 @@
 \section{Introduction}
 \label{chp:intro}
 
-% \subsection{The Modern Computing Stack: Rich Hardware, Aging Foundations}
+\subsection{Memory Is Central to Modern Computing Stacks}
 
-Modern computing bears little resemblance to that of a decade ago.
-A modern datacenter is no longer a warehouse of identical servers running batch
-jobs; it is a heterogeneous fabric of CPUs, GPUs, accelerators, smart NICs, and
+Modern workloads run on top of heterogeneous hardware.
+A datacenter is a fabric of CPUs, GPUs, accelerators, smart NICs, and
 disaggregated memory pools, knitted together by hundred-gigabit interconnects
-and shared by millions of tenants.
-Server DRAM has grown from gigabytes to terabytes per socket;
-GPUs, once graphics coprocessors, have become the dominant substrate for AI,
-linked by cache-coherent interconnects such as NVLink-C2C\@;
-and DMA-capable devices---NICs, NVMe drives, accelerators---now move data at
+and shared by millions of tenants:
+server DRAM reaches terabytes per socket;
+GPUs are the dominant substrate for AI, linked by cache-coherent interconnects
+such as NVLink-C2C\@;
+and DMA-capable devices---NICs, NVMe drives, accelerators---move data at
 hundreds of gigabits per second without ever involving the CPU\@.
+The workloads on this hardware are equally demanding:
+in-memory databases generate working sets of hundreds of terabytes~\cite{redis};
+network-intensive applications in virtualized clouds issue DMA at rates that
+saturate a host DRAM channel~\cite{connectx7};
+and a single LLM training run marshals tens of thousands of GPUs across hundreds
+of hosts to fit a model whose parameter count has grown by orders of magnitude in
+five years~\cite{llama3}.
 
-In parallel with the hardware evolution,
-workloads have also grown in scale and complexity.
-In memory databases,
-can easily generate a memory working set of hundreds of terabytes~\cite{redis},
-putting greater pressure on memory management and address translation.
-Network-intensive applications in virtualized clouds issue DMA at rates that
-saturate a DRAM channel of the host~\cite{connectx7},
-putting relentless pressure on the OS IOMMU subsystem that mediates every device access.
-A single LLM training run marshals tens of thousands of GPUs across hundreds of
-hosts to fit a model whose parameter count has grown by orders of magnitude in
-five years~\cite{llama3}; 
-
-Across this hardware and workload landscape, memory is the central resource that ties the
-stack together.
+Across this hardware and workload landscape, memory is the essential resource.
 Every workload, on every device, ultimately reads and writes memory:
 a CPU thread chases pointers through a terabyte heap;
 a NIC streams packets directly into guest physical memory;
-a GPU kernels perform tensor computations by reading from and writing to device and host memory.
-Every hardware advance---in processors, accelerators, interconnects, or memory
-technology itself---must eventually be reflected in how the software stack
-\emph{maps}, \emph{protects}, and \emph{moves} memory on behalf of those workloads.
-Memory is the join point between hardware capability and application performance.
+a GPU kernel performs tensor computations by reading from and writing to device and host memory.
 
-Yet, the \emph{system software} layers that manage this memory---chiefly the
-operating system kernel, together with the hypervisor, device drivers, and
-AI frameworks that sit alongside it---have not kept pace.
-The kernel's memory management subsystem, IOMMU subsystem, and the
-device memory management system were each conceived for a world that no longer exists:
+% In particular, it is the \emph{system software}---the memory management layer that
+% \emph{maps}, \emph{protects}, and \emph{moves} memory---that stands between every
+% workload and the memory it needs, and each workload relies on a different part of it.
+It is the memory management systems that tie this stack together.
+Data-intensive applications rely on the operating system kernel to set up page
+tables and translate their terabyte-scale address spaces.
+Network-intensive applications rely on the guest kernel's IOMMU subsystem and device
+driver---together with the host kernel and hypervisor---to mediate every DMA a device
+performs and protect memory from unauthorized access.
+AI workloads rely on the GPU driver and the AI frameworks built atop it to place,
+migrate, and evict tensors across device and host memory.
+Whatever the workload, its performance, security, and extensibility are
+ultimately determined by these memory management systems.
+\subsection{Memory Management Systems Create Bottlenecks}
+
+Yet these memory management systems have not kept pace with the hardware and
+workloads they now serve.
+The kernel's memory management subsystem, the IOMMU subsystem, and the
+device memory management system were each designed for a world that no longer exists:
 servers with limited memory capacity,
 device interconnects orders of magnitude slower than today's,
 and accelerators with dedicated memory large enough to hold the entire working set.
 Their core abstractions---the radix-tree page table, the synchronous IOTLB invalidation,
-the application-opaque managed-memory pool---were correct and general for the hardware of their day.
-At today's scale and speed, they have become the bottleneck.
+the application-opaque unified virtual memory---cannot keep up with today's scale and speed,
+and have become the bottleneck for the workloads that depend on them.
 
-\subsection{The System Software Gap}
-
-This dissertation argues that the most consequential bottlenecks in modern memory
-systems are \emph{system software}:
-specifically, of OS and runtime abstractions designed without the hardware
-or workloads they now face.
-% , and not extensible enough to absorb the mismatch
-% gracefully.
-The cost of the mismatch is paid in three currencies:
-\textbf{performance}, when software overhead consumes the headroom that new
+This dissertation argues that existing memory management systems create significant
+bottlenecks.
+These bottlenecks manifest in three ways:
+\textbf{performance}, when management overhead consumes the headroom that new
 hardware provides;
 \textbf{security}, when production systems are forced to disable expensive
 protection mechanisms to remain usable;
-and \textbf{extensibility}, when hardwired software designs prevent the deployment
+and \textbf{extensibility}, when rigid, hardwired designs prevent the deployment
 of new hardware ideas, slowing the broader research and development cycle.
 Across the stack---from CPU virtual memory, to I/O memory protection, to GPU
 device memory---the same pattern recurs:
-a mature, widely deployed abstraction that was once correct and general now
-exposes a semantic gap between what the hardware can do and what the workload
-needs.
+as hardware grows faster and more heterogeneous and workloads grow more demanding,
+the memory management systems responsible for mapping and protecting memory
+increasingly become the limiting factor.
 
-This dissertation studies that gap in three concrete settings, each chosen
+This dissertation studies these bottlenecks in three concrete settings, each chosen
 because it is both representative of the broader pattern and important in its
 own right:
 CPU virtual memory translation in the OS kernel,
@@ -78,10 +75,10 @@ I/O memory protection in the OS kernel (specifically, the guest kernel's IOMMU
 subsystem, in concert with the host kernel and hypervisor),
 and the GPU memory management system.
 In each setting, we identify the specific invariant that the legacy abstraction
-enforces unnecessarily, redesign the software layer around that finding, and
-show that targeted, hardware- and workload-aware system-software changes are
-sufficient to close the gap---without modifying the hardware, refactoring the applications, or
-abandoning the existing system stacks.
+enforces unnecessarily, redesign the memory management system around that finding,
+and show that targeted, hardware- and workload-aware changes are sufficient to
+eliminate the bottlenecks---without refactoring the applications or abandoning the
+existing computing stacks.
 % \subsection{Three Manifestations of the Gap}
 
 % The bottleneck manifests in three distinct but related problems,
@@ -99,9 +96,10 @@ abandoning the existing system stacks.
     architecture, the radix-tree page table, and provide no extensible interface
     to experiment with alternative designs.
     The difficulty of building OS support has, in turn, discouraged disruptive
-    architecture research: hardware proposals are evaluated almost entirely in
-    simulation, under the assumption that OS overhead is constant across
-    translation architectures---an assumption we show to be false.
+    architecture research.
+    Hardware proposals are evaluated almost entirely in simulation, under the
+    assumption that OS overhead is constant across translation architectures---an
+    assumption we show to be false.
 
 \item \textbf{I/O memory protection in virtualized environments} is prohibitively
     expensive.
@@ -142,17 +140,16 @@ abandoning the existing system stacks.
 These three problems span very different parts of the stack---a kernel data
 structure, a kernel-level invalidation protocol that spans guest and host,
 and a GPU memory management system---but they share a common shape.
-In each, modern hardware exposes a capability that the workload demands;
-in each, a legacy software abstraction prevents the workload from using it;
-and in each, the cost of the mismatch is paid in performance, security, or
-the engineering effort required to work around the abstraction.
+In each, the memory management system fails to adapt to the hardware's
+capabilities or the workload's characteristics, and the mismatch surfaces as a
+bottleneck---paid in performance, in security, or in the engineering effort
+required to work around the system.
 
 \subsection{Thesis Statement}
 
-\noindent\emph{Modern memory systems require transformation to meet the demands
-of contemporary hardware and workloads; making the system software layers aware
-of both---through targeted, surgical changes---eliminates the bottlenecks of
-performance, security, and extensibility that arise from legacy designs.}
+\noindent\emph{Designing memory management systems with deep understanding of
+hardware capabilities and workload characteristics can eliminate performance
+bottlenecks without compromising security or extensibility.}
 
 \subsection{Approach: Three Systems}
 
@@ -237,8 +234,9 @@ that closes this gap without changing model code.
 {\pytorchUVMbrand} contributes (1) a \emph{UVM-aware caching allocator}
 that proactively returns cached memory to the driver under oversubscription,
 avoiding the OOM kills that naive UVM caching suffers,
-and (2) \emph{discard-based eviction},
-which marks cached blocks as reclaimable without copying data back to host.
+and (2) \emph{framework-guided eviction}, which uses the framework's knowledge of
+execution order and tensor reuse to mark reclaimable blocks as discardable,
+freeing them without copying data back to host.
 We evaluate on Hugging~Face OPT and Qwen inference workloads
 across A100-PCIe, H100-PCIe, and GH200 NVLink-C2C.
 When memory is not oversubscribed, {\pytorchUVMbrand} matches PyTorch's native
