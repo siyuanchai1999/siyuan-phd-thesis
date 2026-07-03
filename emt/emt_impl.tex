@@ -95,7 +95,7 @@ Hence, EMT supports all virtual memory features of vanilla Linux and
 % the re-implementation of \optgrps should not affect the correctness of the
 % system.}
 
-\begin{figure}[H]
+\begin{figure}[tbp]
 	\centering
 \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
 void walk_tobj_range(start, end, walk) {
@@ -674,7 +674,7 @@ It looks at the translation object and the corresponding page size based on the 
 	and decides the subroutine to invoke. 
 % To update translation objects, the PFH provides both the entry and page size of the new page.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
 	\centering
 	\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
 static vm_fault_t __handle_mm_fault(vma, vaddr, flags)

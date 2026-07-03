@@ -67,6 +67,17 @@
 % Raggedright is recommended for accessibility
 \raggedright
 \setlength{\parindent}{1.5em}
+
+% Relax float-placement thresholds so large figures pack onto text pages with
+% surrounding text instead of being pushed to their own near-empty float page
+% (avoids large trailing white space on the preceding text page).
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.8}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
 \title{Mind the Gap: System Software Redesign for Modern Memory Hardware}
 \title{Memory Management Reimagined: From CPU Translation to I/O Protection and GPU Memory}
 \title{Rethinking Memory Management: CPU Translation, I/O Protection, and GPU Memory for Modern Systems}
