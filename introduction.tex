@@ -1,8 +1,6 @@
 \section{Introduction}
 \label{chp:intro}
 
-\subsection{Memory Is Central to Modern Computing Stacks}
-
 Modern workloads run on top of heterogeneous hardware.
 A datacenter is a fabric of CPUs, GPUs, accelerators, smart NICs, and
 disaggregated memory pools, knitted together by hundred-gigabit interconnects
@@ -14,8 +12,8 @@ and DMA-capable devices---NICs, NVMe drives, accelerators---move data at
 hundreds of gigabits per second without ever involving the CPU\@.
 The workloads on this hardware are equally demanding:
 in-memory databases generate working sets of hundreds of terabytes~\cite{redis};
-network-intensive applications in virtualized clouds issue DMA at rates that
-saturate a host DRAM channel~\cite{connectx7};
+network-intensive applications in virtualized clouds issue DMA at rates close
+to local DRAM bandwidth~\cite{connectx7};
 and a single LLM training run marshals tens of thousands of GPUs across hundreds
 of hosts to fit a model whose parameter count has grown by orders of magnitude in
 five years~\cite{llama3}.
@@ -24,11 +22,8 @@ Across this hardware and workload landscape, memory is the essential resource.
 Every workload, on every device, ultimately reads and writes memory:
 a CPU thread chases pointers through a terabyte heap;
 a NIC streams packets directly into guest physical memory;
-a GPU kernel performs tensor computations by reading from and writing to device and host memory.
+a GPU performs tensor computations by reading from and writing to device and host memory.
 
-% In particular, it is the \emph{system software}---the memory management layer that
-% \emph{maps}, \emph{protects}, and \emph{moves} memory---that stands between every
-% workload and the memory it needs, and each workload relies on a different part of it.
 It is the memory management systems that tie this stack together.
 Data-intensive applications rely on the operating system kernel to set up page
 tables and translate their terabyte-scale address spaces.
@@ -39,9 +34,9 @@ AI workloads rely on the GPU driver and the AI frameworks built atop it to place
 migrate, and evict tensors across device and host memory.
 Whatever the workload, its performance, security, and extensibility are
 ultimately determined by these memory management systems.
-\subsection{Memory Management Systems Create Bottlenecks}
 
-Yet these memory management systems have not kept pace with the hardware and
+\subsection{The Problems}
+Yet, the memory management systems have not kept pace with the hardware and
 workloads they now serve.
 The kernel's memory management subsystem, the IOMMU subsystem, and the
 device memory management system were each designed for a world that no longer exists:
@@ -79,10 +74,7 @@ enforces unnecessarily, redesign the memory management system around that findin
 and show that targeted, hardware- and workload-aware changes are sufficient to
 eliminate the bottlenecks---without refactoring the applications or abandoning the
 existing computing stacks.
-% \subsection{Three Manifestations of the Gap}
 
-% The bottleneck manifests in three distinct but related problems,
-% spanning CPU memory, I/O memory, and device memory:
 \begin{enumerate}
 \item \textbf{CPU virtual memory translation} has become a major bottleneck for
     memory-intensive workloads on terabyte-scale servers.
@@ -130,11 +122,6 @@ existing computing stacks.
     native \texttt{cudaMalloc}-based allocator when memory is not oversubscribed,
     and over 5$\times$ slower than application-level offloading under
     oversubscription (consistent with prior work~\cite{infinigen}).
-
-    % prior work reports it is more than 5$\times$ slower than
-    % application-level offloading~\cite{infinigen}, because the runtime has no visibility into
-    % high-level access patterns and the framework's caching allocator actively
-    % fights it.
 \end{enumerate}
 
 These three problems span very different parts of the stack---a kernel data
@@ -151,7 +138,7 @@ required to work around the system.
 hardware capabilities and workload characteristics can eliminate performance
 bottlenecks without compromising security or extensibility.}
 
-\subsection{Approach: Three Systems}
+\subsection{Contributions}
 
 This dissertation supports the thesis with three systems, each addressing one of
 the manifestations described above.
@@ -246,7 +233,7 @@ Under oversubscription, where the native allocator crashes with OOM,
 and $27\times$--$35\times$ faster than HF KV-cache offloading.
 At high oversubscription, performance narrows to $1.6\times$--$1.7\times$ over default UVM.
 
-\subsection{Summary of Contributions}
+\paragraph{Summary of Contributions}
 
 This dissertation makes the following contributions:
 
@@ -268,9 +255,7 @@ This dissertation makes the following contributions:
         An application-aware UVM integration for PyTorch that
         enables practical GPU memory oversubscription for LLM inference without changing application code.
 
-    \item \textbf{A unifying perspective.} Across all three systems, the bottleneck is
-        not the hardware itself but the software systems layer that sits between
-        hardware capabilities and application demands.
+    \item \textbf{A unifying perspective.} 
         Together, these systems demonstrate that making system software layers hardware-
         and workload-aware---through targeted changes---eliminates bottlenecks in
         performance, security, and extensibility.

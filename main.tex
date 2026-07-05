@@ -124,16 +124,17 @@
 \maketitle
 
 \abstract{
-Modern computing bears little resemblance to that of a decade ago: datacenters
-are now heterogeneous fabrics of CPUs, GPUs, accelerators, and high-bandwidth
-interconnects, running workloads---LLM training, in-memory analytics,
-network intensive applications---that push the hardware to its limits.
-Memory is the central resource of this stack; every workload, on every device,
-ultimately reads and writes memory.
-Yet the system software layers that manage it---the OS kernel, the hypervisor,
-device drivers, and AI frameworks---were conceived for a world that no longer
-exists, and the cost of this mismatch is paid in performance, security, and
-extensibility.
+Modern computing stacks are complex and heterogeneous: datacenters are fabrics
+of CPUs, GPUs, accelerators, and high-bandwidth interconnects, running
+workloads---LLM training, in-memory analytics, network-intensive
+applications---that push the hardware to its limits.
+Memory is the essential resource of this stack; every workload, on every device,
+ultimately reads and writes memory, and it is the memory management
+systems---the OS kernel, the IOMMU subsystem, device drivers, and AI
+frameworks---that tie the stack together.
+Yet these memory management systems have not kept pace with the hardware and
+workloads they now serve, and the cost of the mismatch is paid in performance,
+security, and extensibility.
 
 This dissertation identifies three concrete manifestations of the gap.
 First, commodity OS kernels remain hardwired to radix-tree page tables,
@@ -158,19 +159,123 @@ for each.
 one-for-many invalidations and deferred page freeing, achieving performance
 within 1--8\% of an unprotected system---74--147$\times$ better than the state
 of the art---while preserving strict security guarantees.
-\emph{PyTorch-UVM} integrates a UVM-aware caching allocator and discard-based
+\emph{PyTorch-UVM} integrates a UVM-aware caching allocator and framework-guided
 eviction into PyTorch, enabling practical GPU memory oversubscription for LLM
 inference without modifying application code.
 
-Together, these systems demonstrate that bottlenecks in modern memory
-management arise not from hardware limitations but from system software
-designed without awareness of the hardware and workloads it now serves, and
-that targeted changes to those software layers suffice to eliminate them.
+Together, these systems demonstrate that bottlenecks in modern memory management
+arise not from hardware limitations but from memory management systems designed
+without deep understanding of the hardware capabilities and workload
+characteristics they now serve, and that targeted, hardware- and workload-aware
+changes suffice to eliminate these bottlenecks without compromising security or
+extensibility.
 }
 
 \input{macro.tex}
 \acknowledgements{
-    TODO: Thank everyone who helped you with your research and PhD life.
+First and foremost, I would like to thank my advisor, Professor Tianyin Xu,
+for his boundless energy, rigorous pursuit of academic excellence, and unwavering support throughout my PhD journey.
+In 2021, I arrived at UIUC with little experience in real-world systems and limited ability to carry out independent research.
+Our first project on memory translation took far longer than expected and encountered many more challenges than we had planned for,
+but Tianyin's patience and guidance helped me overcome them and gain confidence in my research abilities.
+Together we went through countless rounds of research ideas, manuscript edits, and presentation details over many late nights.
+I am deeply grateful for his passion and his dedication to both his research and his students.
+As he often said, ``Research never dies,'' and this will continue to inspire me throughout my research journey.
+Through my time with Tianyin, I can say with confidence that I have become a more professional researcher
+and a better person.
+
+I would also like to thank my committee members, Professor Josep Torrellas,
+Professor Darko Marinov, Professor Saugata Ghose, Professor Saksham Agarwal, Professor Weiwei Jia, and Professor Rachit Agarwal,
+for their valuable feedback and guidance on my research.
+I met Josep on the first day of my PhD journey, and
+his strong passion for research and deep insights into computer architecture greatly influenced my EMT project.
+I am very fortunate to have met Darko, who gave me strong support for my research from a software engineering perspective.
+I am also grateful to Saugata, with whom I had the good fortune to work on the memory colocality project.
+The project gave me another concrete experience of hacking the Linux kernel.
+
+I met Saksham after I finished the EMT project, when I was looking for a new project beyond classic CPU memory.
+Saksham's experience with IOMMU and networking introduced me to the challenges and adventures of building
+a secure and performant IOMMU subsystem. I am very grateful, as this later became a concrete project for my PhD dissertation.
+
+I worked with Weiwei on the EMT and DMT projects. Weiwei's strong background in computer systems and virtualization brought
+tremendous help to both projects. I am especially grateful for his help during the evaluation process, which helped
+me articulate our arguments and make our results more convincing.
+
+I would like to thank Rachit for his help with the vFree project.
+We had so many interesting discussions on the security and performance of vFree.
+Rachit was always encouraging and supportive of our ideas and plans,
+and he helped us prioritize tasks during the deadline crunch.
+
+Finally, I wish to give special thanks to my undergraduate advisor,
+Professor Peter Dinda from Northwestern University.
+He introduced me to the field of computer systems and inspired me to pursue a PhD.
+My undergraduate research experience with him was hands-on, and full of fun.
+Peter showed me so many fascinating systems tricks and research ideas
+that I became determined to make this field my own.
+
+The EMT project was my first project in my PhD, and it spanned almost four years.
+I would like to give special thanks to Jiyuan Zhang, who offered countless interesting research ideas
+and much practical advice on how to hack the Linux kernel faster.
+The paper would not have been possible without his help.
+I want to thank Jongyul Kim, who helped me articulate ideas and pushed me to think more deeply about the research questions.
+I am very lucky to have come across Alan Wang, who helped me test EMT on different architectures,
+and Fan Chung, who helped me with radix tree support for EMT and its QEMU implementation.
+ECPT is one of the most important architectures supported by EMT; it was developed by Professor Dimitrios Skarlatos
+and pushed further by Jovan Stojkovic. I wish to express my gratitude to them for sharing their knowledge and expertise
+from the architecture perspective.
+Finally, I want to thank Rubin Du and Shanbo Zhang, who helped me with the EMT artifact evaluation and won
+all three badges.
+
+I shifted my focus to IOMMU during the vFree project.
+I would like to give special thanks to Leshna Balara, who helped
+with the design, measurement, debugging, security analysis, and writing of the paper.
+She went through almost every detail with me, and we would not have been able to make the paper ready for submission
+in time without her help.
+I am very grateful to Ishvik Singh for his help with setting up various evaluation environments and testing the vFree prototype.
+I am very grateful to Owen Cochell for his effort to implement vFree in modern drivers and test them on different platforms.
+I also wish to thank Jiyuan Zhang again for his research ideas on this project.
+
+I was very fortunate to join NVIDIA as an intern in the summer of 2025
+and work on the PyTorch-UVM project.
+My mentor, Ram Tummala, was very supportive and flexible with my research plan,
+and his guidance and technical insights led to a successful internship.
+During my internship, I was very fortunate to work with a great team of engineers and researchers,
+including Balbir Singh, Alistair Popple, Guilherme Cox, Mitko Haralanov, Ziyi Zhao, Vishnuswaroop Ramesh,
+and Vivek Kini, who provided strong technical support in GPU/CUDA driver implementation and testing.
+My manager, Rahul Anand, was especially supportive of my funding and research ideas.
+
+Industry internships were a critical part of my PhD journey. I interned at Google in the summer of 2022 and at Meta in the summer of 2024.
+I wish to thank my mentors at Google, Alex Tran, Michael Wong, and Havard Skinnemoen.
+This was my first internship experience in the US, and it gave me first-hand experience working with large-scale systems.
+At Meta, I worked with Jaewon Lee on chunked prefill.
+I am grateful for his mentorship, which introduced me to the world of real-world AI systems.
+
+I am extremely fortunate to have met groups of close friends during my PhD journey.
+First, I want to thank my xlab peers.
+Xudong Sun is the most senior PhD student in our group.
+We met even before I started my PhD, and he supported me throughout the journey.
+Jinghao Jia also worked on the OS kernel, and we spent countless nights together hacking code,
+talking about research ideas, and debugging kernel bugs.
+Tyler Gu, Yinfang Chen, Shuai Wang, and Xuhao Luo started their PhD in the same year as me.
+We spent countless days and nights together talking about research or simply sharing our life experiences.
+Jiyuan Zhang collaborated with me on almost every project in my PhD. Beyond working together,
+we often had interesting discussions about the different corner cases of systems and of the world.
+Wentao Zhang became the person who stayed with me late at night during the last few years.
+Wentao was especially helpful, rebooting my failed machines several times during deadline runs.
+In my later years of PhD, I also met Cathy Cai, Jackson Clark, Yiming Su, Ayush Bansal, and Owen Cochell,
+with whom I shared many conversations about research and life.
+
+Beyond my lab, I want to thank my friends who supported me throughout my PhD journey.
+Thank you to Peiye Guan, Zhuoran Han, Yongzhou Chen, Youning Chen, Junzhe Kang, Boxin Wang, Mingye Xiong, Nanjie Yu, Xiaoqin Cai, Yunqi Li, Xuan Zhang, Yinbo Tang, Nicko Wei, Bingyan Liu, Chuyang Xu, Xiying Zhao, Hou Xie,
+Dylan Zhang, Lan Li, Lan Jiang, Zikun Liu, Bill Tao, Dingyuan Cao, Lilia Tang, Chirag Shetty, Gangmuk Lim, Wanyu Zhao, Wenjie Ma, Jiaqi Lou, Jiaxin Wan, Shuang Song, Xinyi Liu, Jiaxi Li,
+Billy Li, Mingyuan Wu, Kaizhuo Yan, Sizheng Zhang, Yifan Zhao, Zixin Huang,
+Yan Sun, Gabriella Cai, Benjamin Reidys, Daixuan Li, Shaobo Li, Ke Zhong, Ziyi Zhao, and Kaiyang Zhao.
+Special thanks to Jinghan Sun, Ying Jing, Yibo Zhang, Bowen Jin, Yucheng Ma, Bowen Chen, Shenjiang Liu, Hongbo Zheng, and Hanqi Mao for the wonderful soccer games.
+Special thanks to Peiye Guan, Tingkai Liu, Jiakun Yan, Youning Chen, Yongzhou Chen, Shenjiang Liu, and William Zheng for the competitive badminton games.
+Special thanks to Jiakun Yan, Danyang Duan, Jing Li, Yuqing Jian, and Daniel He for the excellent frisbee games.
+
+Finally, I want to thank my family, who supported me throughout my PhD journey.
+They gave me unconditional love and encouragement, and I am forever grateful.
 }
 
 % dedication uses begin and end syntax because it opens a center environment
