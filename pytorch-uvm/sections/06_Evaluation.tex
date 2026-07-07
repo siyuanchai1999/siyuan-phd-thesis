@@ -111,7 +111,7 @@ We report end-to-end request latency,
 % (i.e., grow the KV cache) until the workload is oversubscribed.
 
 % --------------GH200 NVLink-C2C--------------
-\begin{figure}[H]
+\begin{figure}
     \centering
     \begin{subfigure}{\linewidth}
         \includegraphics[width=\linewidth]{figures/eval_batch_size_gh200_small.pdf}
@@ -210,23 +210,6 @@ Unlike on GH200, where NVLink-C2C makes transparent UVM page faults relatively c
 % Fix the prompt and sweep the model size (weights footprint)
 % until the model alone exceeds GPU memory.
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{\linewidth}
-        \includegraphics[width=\linewidth]{figures/total_run_time_vs_opt_model_size_on_gh200_64k_prompt1920_decode128_bsz1.pdf}
-        \caption{OPT models}
-        \label{uvm:fig:eval:opt_model_size}
-    \end{subfigure}
-    
-    \begin{subfigure}{\linewidth}
-        \includegraphics[width=\linewidth]{figures/total_run_time_vs_qwen_model_size_on_gh200_64k_prompt1920_decode128_bsz1.pdf}
-        \caption{Qwen models}
-        \label{uvm:fig:eval:qwen_model_size}
-    \end{subfigure}
-    \caption{Total run time on GH200 NVLink-C2C for varying model sizes.}
-    \label{uvm:fig:eval:model_size_gh200}
-\end{figure}
-
 \paragraphb{GH200 NVLink-C2C}
 Figure~\ref{uvm:fig:eval:model_size_gh200} shows the total run time of OPT and Qwen models
     on a GH200 system with 64\,KiB pages.
@@ -256,25 +239,23 @@ When the GPU is oversubscribed,
     while still matching the application-level weight-offload baseline (A2)
     without any manual changes to application code.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \begin{subfigure}{\linewidth}
-        \includegraphics[width=\linewidth]{figures/decode_time_vs_opt_model_size_on_h100_64k_prompt1920_decode128_bsz1.pdf}
-        \caption{OPT models (decode time)}
-        \label{uvm:fig:eval:opt_model_size_h100}
+        \centering
+        \includegraphics[width=0.89\linewidth]{figures/total_run_time_vs_opt_model_size_on_gh200_64k_prompt1920_decode128_bsz1.pdf}
+        \caption{OPT models}
+        \label{uvm:fig:eval:opt_model_size}
     \end{subfigure}
     
     \begin{subfigure}{\linewidth}
-        \includegraphics[width=\linewidth]{figures/total_run_time_vs_qwen_model_size_on_h100_64k_prompt1920_decode128_bsz1.pdf}
-        \caption{Qwen models (total run time)}
-        \label{uvm:fig:eval:qwen_model_size_h100}
+        \centering
+        \includegraphics[width=0.89\linewidth]{figures/total_run_time_vs_qwen_model_size_on_gh200_64k_prompt1920_decode128_bsz1.pdf}
+        \caption{Qwen models}
+        \label{uvm:fig:eval:qwen_model_size}
     \end{subfigure}
-    \caption{Run time on H100 PCIe for varying model sizes
-        (1920 prompt + 128 decode tokens, batch size 1).
-        OPT-175B is omitted because its weights exceed the host's 252\,GiB of system memory,
-        so all UVM-based baselines fail with a host OOM
-        before they can begin streaming pages to the GPU.}
-    \label{uvm:fig:eval:model_size_h100}
+    \caption{Total run time on GH200 NVLink-C2C for varying model sizes.}
+    \label{uvm:fig:eval:model_size_gh200}
 \end{figure}
 
 \paragraphb{H100 PCIe}
@@ -334,6 +315,29 @@ We expect this gap to shrink on PCIe Gen-5 / NVLink-attached H100 variants
     {\uvmname} primarily delivers oversubscription transparency
     rather than a meaningful performance edge over U0
     in the model-weights-dominated regime.
+
+\begin{figure}[!htbp]
+    \centering
+    \begin{subfigure}{\linewidth}
+        \centering
+        \includegraphics[width=0.89\linewidth]{figures/total_run_time_vs_opt_model_size_on_h100_64k_prompt1920_decode128_bsz1.pdf}
+        \caption{OPT models}
+        \label{uvm:fig:eval:opt_model_size_h100_total}
+    \end{subfigure}
+
+    \begin{subfigure}{\linewidth}
+        \centering
+        \includegraphics[width=0.89\linewidth]{figures/total_run_time_vs_qwen_model_size_on_h100_64k_prompt1920_decode128_bsz1.pdf}
+        \caption{Qwen models}
+        \label{uvm:fig:eval:qwen_model_size_h100}
+    \end{subfigure}
+    \caption{Run time on H100 PCIe for varying model sizes
+        (1920 prompt + 128 decode tokens, batch size 1).
+        OPT-175B is omitted because its weights exceed the host's 252\,GiB of system memory,
+        so all UVM-based baselines fail with a host OOM
+        before they can begin streaming pages to the GPU.}
+    \label{uvm:fig:eval:model_size_h100}
+\end{figure}
 
 \subsubsection{Analysis of Design Choices}
 \label{uvm:sec:eval:design}
@@ -504,24 +508,6 @@ A dynamic threshold that adapts to the observed fault rate and reuse distance
 \paragraph{Trade-off of No migration}
 \label{uvm:sec:eval:design:direct}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/eval_no_migration_h100.pdf}
-    \caption{Effect of disabling migration on H100 PCIe (4\,KiB pages):
-        total run time of OPT-13B for batch sizes 32--64.
-        U1 is {\uvmname} with on-demand migration;
-        U3 is the same configuration with migration disabled,
-        so that pages are accessed in place over PCIe (zero-copy).
-        Reserved / active oversubscription ratios are
-        bsz=32: $1.05\times$\,/\,$0.97\times$,
-        bsz=40: $1.24\times$\,/\,$1.14\times$,
-        bsz=48: $1.43\times$\,/\,$1.31\times$,
-        bsz=56: $1.62\times$\,/\,$1.48\times$,
-        bsz=64: $1.80\times$\,/\,$1.65\times$.
-        Bars at $10{,}800$\,s indicate runs that hit the 3-hour timeout.}
-    \label{uvm:fig:eval:no_migration_h100}
-\end{figure}
-
 \paragraphb{H100 PCIe}
 The thrashing we observed for U1 in \S\ref{uvm:sec:eval:design:discard}
     is a direct consequence of the default UVM migration policy:
@@ -587,6 +573,24 @@ We expect this picture to shift on GH200,
     whose $\sim$$450$\,GB/s/dir NVLink-C2C link makes in-place access far cheaper
     and should extend the regime where U3 beats U1;
     a full GH200 sweep is left to future work.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/eval_no_migration_h100.pdf}
+    \caption{Effect of disabling migration on H100 PCIe (4\,KiB pages):
+        total run time of OPT-13B for batch sizes 32--64.
+        U1 is {\uvmname} with on-demand migration;
+        U3 is the same configuration with migration disabled,
+        so that pages are accessed in place over PCIe (zero-copy).
+        Reserved / active oversubscription ratios are
+        bsz=32: $1.05\times$\,/\,$0.97\times$,
+        bsz=40: $1.24\times$\,/\,$1.14\times$,
+        bsz=48: $1.43\times$\,/\,$1.31\times$,
+        bsz=56: $1.62\times$\,/\,$1.48\times$,
+        bsz=64: $1.80\times$\,/\,$1.65\times$.
+        Bars at $10{,}800$\,s indicate runs that hit the 3-hour timeout.}
+    \label{uvm:fig:eval:no_migration_h100}
+\end{figure}
 
 \subsubsection{System-Allocated Memory (SAM)}
 \label{uvm:sec:eval:sam}
