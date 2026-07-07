@@ -1,4 +1,4 @@
-\subsection{Future Work}
+\subsection{Discussion}
 
 \subsubsection{Thrashing Mitigation: App-Aware UVM Eviction}
 \label{uvm:sec:future:thrash}
@@ -40,12 +40,43 @@ in other words, each GPU has its own caching allocator that is unaware of other 
 For UVM, the pattern will change since every GPU can access the memory. 
 
 
-\subsubsection{Using cudaGraph to hint UVM Migration}
-UVM suffers from lack of information from the application level.
-CudaGraph compiles a series of cuda kernel first,
-and then launch all of them at once.
-We can borrow the idea to have a record-and-replay pattern.
-We can record the page faults
-happened at compile time,
-and use the compile time information 
-to accelerate the replay process.
+\subsubsection{Using CUDA Graphs to Hint UVM Migration}
+UVM suffers from a lack of application-level information:
+    the driver reacts to page faults after they occur,
+    with no advance knowledge of which pages the next kernel will touch.
+CUDA Graphs offer a natural way to close this gap.
+Rather than launching kernels one at a time,
+    a CUDA Graph captures an entire sequence of kernels ahead of time
+    and replays the whole graph on each invocation;
+    since DNN training and inference are highly repetitive,
+    the access pattern of one replay closely predicts the next.
+We can exploit this with a record-and-replay approach to migration:
+    during the first execution of a captured graph,
+    the runtime records the page faults and resulting migrations
+    to build a per-graph access trace,
+    and on subsequent replays the driver consults this trace to
+    prefetch pages before they fault and to evict pages that are
+    dead rather than those reused later in the graph.
+This supplies the driver with the logical-lifetime information called for in
+    Sections~\ref{uvm:sec:future:thrash} and~\ref{uvm:sec:future:hints},
+    but derived automatically from graph capture rather than
+    explicit application annotations.
+
+\subsubsection{Concluding Remarks}
+\label{uvm:sec:conclusion}
+LLM inference is increasingly bound by GPU memory,
+    and today each framework answers this with its own hand-tuned offloading code.
+UVM promises to retire that machinery with transparent oversubscription,
+    but has long been dismissed as too slow for production.
+{\uvmname} shows that this gap is not fundamental:
+    by propagating application-level intent down to the driver
+    through a UVM-aware caching allocator and framework-guided eviction,
+    it turns UVM into a practical substrate for PyTorch,
+    matching the native \texttt{cudaMalloc} allocator when memory fits
+    and running to completion---often far faster than default UVM---%
+    where the native allocator simply crashes.
+A performance gap to hand-tuned offloading remains under heavy oversubscription,
+    but our thrashing-mitigation study and the directions above
+    chart a concrete path toward closing it,
+    and we hope {\uvmname} encourages frameworks to treat
+    driver-managed memory as a first-class citizen rather than a last resort.

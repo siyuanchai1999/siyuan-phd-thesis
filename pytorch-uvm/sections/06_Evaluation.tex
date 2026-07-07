@@ -22,7 +22,7 @@ We evaluate {\uvmname} on two platforms that span the
     The CPU and GPU communicate over PCIe Gen-4 ($\sim$$32$\,GB/s/dir).
     The default GPU page size is $4$\,KiB.
 \item \textbf{GH200 (NVLink-C2C).}
-    An NVIDIA GH200 480GB Grace Hopper Superchip
+    An NVIDIA GH200 Grace Hopper Superchip
     that integrates a $72$-core Grace CPU (Arm Neoverse-V2, single socket)
     with a Hopper GPU on a single coherent fabric.
     The Hopper GPU exposes $96$\,GiB of HBM3
@@ -82,8 +82,8 @@ We compare {\uvmname} against the four classes of allocators
 \item \textbf{U1, {\uvmname}.}
     Our full design,
     combining the UVM-aware caching allocator,
-    UVM-specific proactive GC,
-    and discard-based eviction
+    UVM-specific active GC,
+    and framework-guided eviction
     (\S\ref{uvm:sec:design:caching},~\S\ref{uvm:sec:design:discard}).
 \end{enumerate}
 
@@ -91,12 +91,12 @@ We compare {\uvmname} against the four classes of allocators
 We report end-to-end request latency,
     decomposed where relevant into
     Time-to-First-Token (TTFT) and Inter-Token Latency (ITL).
-For ablations we additionally instrument
-    eviction traffic volume and time,
-    GPU kernel time,
-    and the number and latency of UVM page faults,
-    which lets us attribute end-to-end gains
-    to specific design decisions.
+% For ablations we additionally instrument
+%     eviction traffic volume and time,
+%     GPU kernel time,
+%     and the number and latency of UVM page faults,
+%     which lets us attribute end-to-end gains
+%     to specific design decisions.
 
 \subsubsection{Pytorch-UVM Performance}
 \label{uvm:sec:eval:oversub}
@@ -131,11 +131,17 @@ For ablations we additionally instrument
 \paragraphb{GH200 NVLink-C2C}
 Figure~\ref{uvm:fig:eval:batch_size_gh200} shows the total run time of OPT-13B on the GH200 platform as we scale the number of concurrent prompts. We split the results into two regimes: before oversubscription (batch size 8 to 32) and after oversubscription (batch size 40 to 72).
 
-\textbf{Before oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_gh200_small}), the KV cache footprint comfortably fits in the physical GPU memory. Vanilla PyTorch (C1) and {\uvmname} (U1) achieve nearly identical performance (e.g., 23.02s vs. 24.18s at batch size 32). In contrast, the application-level KV cache offload (A) incurs a significant overhead ($2.2\times$ slower) due to manually moving tensors between the CPU and GPU. The PyTorch default UVM (U0) performs worse by orders of magnitude ($30\times$ slower) due to the lack of user-space caching, exposing every allocation to the driver.
+\textbf{Before oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_gh200_small}), the total working set comfortably fits in the physical GPU memory. Vanilla PyTorch (C1) and {\uvmname} (U1) achieve nearly identical performance (within $5\%$ at batch size 32). In contrast, the application-level KV cache offload (A) incurs a significant overhead ($2.2\times$ slower) due to manually moving tensors between the CPU and GPU. The PyTorch default UVM (U0) performs worse by orders of magnitude ($30\times$ slower) due to the lack of user-space caching, exposing every allocation to the driver.
 
-\textbf{After oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_gh200_large}), the KV cache grows to exceed the 96\,GiB HBM limit (from $1.06\times$ oversubscribed at batch size 40 up to $1.83\times$ at batch size 72). Vanilla PyTorch (C1) consistently fails with an Out-Of-Memory (OOM) error in this regime. {\uvmname} (U1), however, runs seamlessly, and provides a massive speedup over default UVM (U0)---for example, taking only 48.0s compared to 910s at batch size 40, and taking 985.7s compared to 2557s at batch size 72 ($2.6\times$ to $19\times$ faster).
+\textbf{After oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_gh200_large}), the total working set grows to exceed the 96\,GiB HBM limit (from $1.06\times$ oversubscribed at batch size 40 up to $1.83\times$ at batch size 72). Vanilla PyTorch (C1) consistently fails with an Out-Of-Memory (OOM) error in this regime. 
+{\uvmname} (U1), however, runs seamlessly, and provides a massive speedup over default UVM (U0)---for example, $19\times$ faster at batch size 40 and $2.6\times$ faster at batch size 72.
 
-Compared to the application-level KV cache offload (A) in the oversubscribed regime, {\uvmname} (U1) is initially faster at light oversubscription ($1.38\times$ faster at batch size 40). However, at heavy oversubscription (batch size 48 to 72), the application-level offload outperforms {\uvmname} (U1), because the former orchestrates CPU--GPU transfers perfectly synchronously around each forward pass, whereas {\uvmname} relies on transparent page faults and UVM-level eviction heuristics. Nonetheless, {\uvmname} achieves functional oversubscription completely transparently without the engineering complexity of explicit KV cache management.
+Compared to the application-level KV cache offload (A) in the oversubscribed regime, {\uvmname} (U1) is initially faster at light oversubscription ($1.38\times$ faster at batch size 40). 
+However, at heavy oversubscription (batch size 48 to 72), the application-level offload outperforms {\uvmname} (U1), 
+because the former refactors application code to explicitly move KV cache tensors to GPU before they are needed, 
+whereas {\uvmname} relies on transparent page faults and UVM-level eviction heuristics. 
+Nonetheless, {\uvmname} achieves functional oversubscription completely transparently 
+without the engineering complexity of explicit KV cache management.
 
 % --------------H100 PCIe (4\,KiB pages)--------------
 \begin{figure}[H]
@@ -163,38 +169,32 @@ We split the results into two regimes:
     and after oversubscription (batch size 32 to 64).
 
 \textbf{Before oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_h100_small}),
-    the KV cache footprint fits in the 80\,GiB HBM
+    the total working set fits in the 80\,GiB HBM
     (oversubscription ratio of $0.60\times$ at batch size 8 to $0.99\times$ at batch size 24).
-Vanilla PyTorch (C1) and {\uvmname} (U1) achieve nearly identical performance
-    (e.g., 11.28s vs. 13.64s at batch size 24).
-In contrast, application-level KV cache offload (A) is roughly $35\times$ slower than {\uvmname}
-    (e.g., 475.57s vs. 13.64s at batch size 24),
+Vanilla PyTorch (C1) and {\uvmname} (U1) achieve nearly identical performance.
+In contrast, application-level KV cache offload (A) is roughly $35\times$ slower than {\uvmname},
     because every forward pass must stream the KV tensors
     over the comparatively narrow PCIe Gen-4 link.
 PyTorch default UVM (U0) is even worse,
-    roughly $57\times$ slower than {\uvmname}
-    (e.g., 779.69s vs. 13.64s at batch size 24),
+    roughly $57\times$ slower than {\uvmname},
     as it pays a UVM page-fault round-trip for every cold access
     without any user-space caching.
 
 \textbf{After oversubscription} (Figure~\ref{uvm:fig:eval:batch_size_h100_large}),
-    the KV cache exceeds the 80\,GiB HBM limit
+    the total working set exceeds the 80\,GiB HBM limit
     (from $1.05\times$ oversubscribed at batch size 32
     up to $1.80\times$ at batch size 64).
 Vanilla PyTorch (C1) fails with OOM across the entire range.
 {\uvmname} (U1) runs to completion in every configuration
     and outperforms default UVM (U0) throughout
-    (e.g., 22.75s vs. 1030.77s at batch size 32, a $45\times$ speedup;
-    and 3923.18s vs. 6274.14s at batch size 64, a $1.6\times$ speedup).
+    (e.g., a $45\times$ speedup at batch size 32 and a $1.6\times$ speedup at batch size 64).
 At very light oversubscription (batch size 32, $1.05\times$),
-    {\uvmname} stays close to the in-memory baseline (22.75s)
-    and is also more than $27\times$ faster than application-level offload (620.17s).
+    {\uvmname} stays close to the in-memory baseline
+    and is also more than $27\times$ faster than application-level offload.
 
 Beyond batch size 32, however,
     the comparison with application-level offload reverses on H100 PCIe:
-    A is $\sim$$3\times$ faster than {\uvmname} across batch sizes 40 to 64
-    (e.g., 812.67s vs. 2500.63s at batch size 40,
-    and 1355.40s vs. 3923.18s at batch size 64).
+    A is $\sim$$3\times$ faster than {\uvmname} across batch sizes 40 to 64.
 Unlike on GH200, where NVLink-C2C makes transparent UVM page faults relatively cheap,
     PCIe Gen-4's much lower bandwidth amplifies the per-fault cost,
     so the perfectly synchronous CPU--GPU streaming of application-level offload pays off
@@ -234,31 +234,27 @@ As the model size increases,
     the memory footprint eventually exceeds the physical GPU memory capacity. 
 
 Vanilla PyTorch (C1) fails with an Out-Of-Memory (OOM) error
-    on the largest models (OPT-66B, OPT-175B, Qwen2.5-72B, and Qwen1.5-110B)
-    because its native allocator expects memory to be strictly device-resident. 
-
-Application-level model weights offload (A2) successfully runs all models
-    by manually moving weights between the CPU and GPU,
-    avoiding OOM errors at the cost of application complexity.
-
-PyTorch default UVM (U0) also avoids OOM errors
-    by transparently spilling pages to host memory,
-    but it suffers from severe performance degradation when the GPU is oversubscribed
+    on the largest models (OPT-66B, OPT-175B, Qwen2.5-72B, and Qwen1.5-110B),
+    because its native allocator expects memory to be strictly device-resident.
+Application-level weight offload (A2) runs all models
+    by manually streaming weights between the CPU and GPU,
+    avoiding OOM at the cost of application complexity;
+    default UVM (U0) likewise avoids OOM by transparently spilling pages to host,
+    but degrades severely under oversubscription
     due to unrestrained allocation growth and eviction thrashing.
 
-PyTorch-UVM (U1) successfully runs all models transparently.
+{\uvmname} (U1) runs all models transparently.
 When memory is not oversubscribed
-    (e.g., OPT-6.7B to OPT-30B, Qwen2.5-7B to Qwen2.5-32B),
-    PyTorch-UVM matches the performance of Vanilla PyTorch (C1) and A2.
-This demonstrates that our user-space caching
-    and UVM-specific proactive garbage collection (\S\ref{uvm:sec:design:caching})
-    effectively eliminate the overhead of managed memory in the common case.
+    (e.g., OPT-6.7B--OPT-30B, Qwen2.5-7B--Qwen2.5-32B),
+    it matches vanilla PyTorch (C1) and A2,
+    showing that our user-space caching
+    and UVM-specific active garbage collection (\S\ref{uvm:sec:design:caching})
+    eliminate the overhead of managed memory in the common case.
 When the GPU is oversubscribed,
-    PyTorch-UVM outperforms the PyTorch default UVM (U0) by a large margin
-    (e.g., $1.95\times$ speedup on OPT-175B and $1.87\times$ speedup on Qwen1.5-110B).
-Furthermore, PyTorch-UVM achieves this
-    while matching the performance of the application-level model weights offload baseline (A2),
-    but without requiring any manual modifications to the application code.
+    {\uvmname} outperforms default UVM (U0) by a large margin
+    (e.g., $1.95\times$ on OPT-175B and $1.87\times$ on Qwen1.5-110B),
+    while still matching the application-level weight-offload baseline (A2)
+    without any manual changes to application code.
 
 \begin{figure}[H]
     \centering
@@ -294,13 +290,10 @@ We omit OPT-175B from this sweep
 For models whose weights fit in the $80$\,GiB of HBM
     (OPT-6.7B--OPT-30B and Qwen2.5-7B--Qwen2.5-32B),
     {\uvmname} (U1), vanilla PyTorch (C1),
-    and application-level offload (A2) are essentially indistinguishable
-    (e.g., U1 vs. C1 on OPT-30B: 3.67s vs. 3.66s decode;
-    on Qwen2.5-32B: 6.35s vs. 6.22s total),
-    while default UVM (U0) is roughly $10$--$20\times$ slower
-    (e.g., 74.95s on OPT-30B and 64.52s on Qwen2.5-32B).
+    and application-level offload (A2) are essentially indistinguishable,
+    while default UVM (U0) is roughly $10$--$20\times$ slower.
 This mirrors the GH200 result and confirms that
-    {\uvmname}'s caching and proactive GC eliminate UVM's per-allocation overhead
+    {\uvmname}'s caching and active GC eliminate UVM's per-allocation overhead
     on H100 PCIe just as effectively as on NVLink-C2C.
 
 \textbf{Above the device-memory limit.}
@@ -308,14 +301,11 @@ On the largest models that still fit in host memory
     (OPT-66B, Qwen2.5-72B, Qwen1.5-110B),
     Vanilla PyTorch (C1) OOMs as expected,
     and the gap between U1 and U0 narrows or even reverses on H100:
-    on OPT-66B U1 takes 3541s vs. U0's 3702s
-    (only $\sim$$5\%$ faster);
-    on Qwen2.5-72B U1 takes 3637s vs. U0's 3773s ($\sim$$4\%$ faster);
-    and on Qwen1.5-110B U1 takes 6520s vs. U0's 5593s
-    --- {\uvmname} is actually $\sim$$1.17\times$ slower than U0 here.
-Application-level offload (A2) wins decisively across the board on these models
-    (e.g., 405s on OPT-66B, 495s on Qwen2.5-72B, 1017s on Qwen1.5-110B),
-    making A2 roughly $7$--$9\times$ faster than {\uvmname} on H100 PCIe.
+    on OPT-66B U1 is only $\sim$$5\%$ faster than U0;
+    on Qwen2.5-72B $\sim$$4\%$ faster;
+    and on Qwen1.5-110B {\uvmname} is actually $\sim$$1.17\times$ slower than U0.
+Application-level offload (A2) wins decisively across the board on these models,
+    roughly $7$--$9\times$ faster than {\uvmname} on H100 PCIe.
 
 This is in sharp contrast to GH200 NVLink-C2C,
     where {\uvmname} achieved $1.95\times$ and $1.87\times$ speedups over U0
@@ -327,7 +317,7 @@ At batch size 1 the decode loop reads the model's weights once per token,
 NVLink-C2C provides $\sim$$450$\,GB/s/dir,
     leaving the interconnect with enough headroom that
     eliminating spurious eviction and re-fault traffic
-    (the work that UVMDiscard and the proactive GC do)
+    (the work that framework-guided eviction and the active GC do)
     translates directly into end-to-end speedup.
 PCIe Gen-4 provides only $\sim$$32$\,GB/s/dir
     --- more than $10\times$ less ---
@@ -351,15 +341,15 @@ We expect this gap to shrink on PCIe Gen-5 / NVLink-attached H100 variants
 % Per-design-choice ablations, isolating the contribution of
 % each component of {\uvmname}.
 
-\paragraph{Trade-off of UVMDiscard}
+\paragraph{Trade-off of Framework-guided Eviction with UVMDiscard}
 \label{uvm:sec:eval:design:discard}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/eval_discard_h100.pdf}
-    \caption{Effect of UVMDiscard on H100 PCIe (4\,KiB pages):
+    \caption{Effect of framework-guided eviction on H100 PCIe (4\,KiB pages):
         total run time of OPT-13B for batch sizes spanning the oversubscription transition.
-        U1 enables discard-based eviction;
+        U1 enables framework-guided eviction (implemented via UVMDiscard);
         U1' keeps the rest of {\uvmname} but evicts via copy-back to host.
         Reserved / active oversubscription ratios are
         bsz=24: $0.99\times$\,/\,$0.81\times$,
@@ -370,10 +360,10 @@ We expect this gap to shrink on PCIe Gen-5 / NVLink-attached H100 variants
 \end{figure}
 
 \paragraphb{H100 PCIe}
-Figure~\ref{uvm:fig:eval:discard_h100} isolates the contribution of UVMDiscard (\S\ref{uvm:sec:design:discard})
-    by comparing {\uvmname} with discard enabled (U1)
+Figure~\ref{uvm:fig:eval:discard_h100} isolates the contribution of framework-guided eviction (\S\ref{uvm:sec:design:discard})
+    by comparing {\uvmname} with framework-guided eviction enabled (U1)
     against an otherwise-identical configuration
-    that disables discard and instead evicts pages by copying them back to host (U1').
+    that disables it and instead evicts pages by copying them back to host (U1').
 The sweep covers the oversubscription transition on H100 PCIe.
 We distinguish two oversubscription ratios:
     \emph{reserved} oversubscription is the size of the allocator's reserved memory pool relative to HBM,
@@ -390,14 +380,14 @@ Vanilla PyTorch (C1), default UVM (U0), and application-level offload (A)
 
 \textbf{Active oversub $<$ 1 (bsz 24, 32).}
 When the actively-used pages still fit on the GPU,
-    discard is a decisive win:
-    U1 takes 13.64s vs. U1''s 19.92s at bsz 24 ($1.46\times$ faster),
-    and 22.75s vs. 37.40s at bsz 32 ($1.64\times$ faster).
+    our framework-guided eviction is a decisive win:
+    U1 is $1.46\times$ faster than U1' at bsz 24
+    and $1.64\times$ faster at bsz 32.
 The pages that get evicted in this regime are exactly the ones
     that the allocator has marked as cached/freed
     (KV blocks for completed steps, scratch buffers, etc.),
     and {\uvmname}'s allocator can tell UVM that those pages are safe to drop.
-This is the design intent of UVMDiscard:
+This is the design intent of \uvmname:
     information that lives in the framework---which buffers are still semantically live---%
     is normally invisible to the GPU MMU,
     and exposing it lets us avoid pure-overhead copy-backs to host.
@@ -408,31 +398,40 @@ U1' loses this information, so even when active oversub is below 1
 \textbf{Active oversub $>$ 1 (bsz 40, 48).}
 Once the live working set itself exceeds HBM,
     the trend reverses or flattens:
-    U1' finishes in 1226.54s while U1 takes 2500.63s at bsz 40 ($2.04\times$ slower with discard),
-    and the two variants are within 7\% at bsz 48 (2887.40s vs. 3083.91s).
+    U1 (framework-guided eviction) is $2.04\times$ slower than U1' at bsz 40,
+    and the two variants are within $7\%$ at bsz 48.
 The pages that {\uvmname} now evicts are no longer dominated by safely-discardable cached blocks;
     they include genuinely live data
     that is re-touched within the same forward pass.
-For these pages, discard turns the next access into a full UVM page fault
-    that re-allocates the page on the GPU and serves it from cold host memory,
-    whereas U1' keeps the still-resident host copy
-    and lets the driver migrate it back cheaply.
-The extra re-fault cost on PCIe Gen-4 outweighs the eviction-bandwidth savings.
-Both variants nonetheless remain $\geq$$1.6\times$ faster than U0 (4872.83s at bsz 48),
-    and both are substantially slower than application-level offload (A: 987.70s)
+In this regime, framework-guided eviction provides no benefit over plain copy-back:
+    the same thrashing occurs either way.
+Worse, at bsz 40 discard is not merely neutral but adds overhead of its own.
+When a discarded block is later reused,
+    {\uvmname} prepopulates it on the GPU to avoid page faults at kernel-execution time.
+At an active oversubscription ratio just above $1$ (e.g., bsz 40),
+    this produces a discard-reuse ping-pong:
+    a page is discarded to reclaim space
+    and then almost immediately back-populated onto the GPU for its next use,
+    so the bandwidth discard was meant to save is instead spent
+    shuttling the same page back and forth.
+% On the narrow PCIe Gen-4 link this extra re-fault cost
+%     outweighs the eviction bandwidth that discard saves,
+%     so U1 falls behind U1' in this regime.
+Note that both variants nonetheless remain $\geq$$1.6\times$ faster than U0,
+    and both are substantially slower than application-level offload (A)
     for the same reasons discussed in \S\ref{uvm:sec:eval:oversub:prompts}.
 
-The net takeaway is that UVMDiscard pays off precisely when
-    PyTorch holds discard-relevant information that UVM otherwise cannot see:
-    namely, that some currently-resident pages are cached/freed allocations
+The takeaway is that framework-guided eviction pays off precisely when
+    PyTorch holds framework-level information that UVM otherwise cannot see:
+    namely, that some currently-resident pages are cached but inactive allocations
     rather than live data.
 This is the regime where {\uvmname} stays close to the in-memory baseline,
-    and discard is what lets it close the last gap to C1.
+    and our design of passing framework-level information is what lets it close the last gap to C1.
 Once the active working set itself exceeds device memory
-    that signal is no longer there to exploit,
-    and the cheaper option on a discrete interconnect is to keep the host-side copy.
-We revisit how to recover discard's benefit in this regime
-    when discussing access-counter-driven placement in \S\ref{uvm:sec:eval:design:counters}.
+    that signal is no longer there to exploit.
+    % and the cheaper option on a discrete interconnect is to keep the host-side copy.
+% We revisit how to recover discard's benefit in this regime
+%     when discussing access-counter-driven placement in \S\ref{uvm:sec:eval:design:counters}.
 \paragraph{Trade-off of Access Counters}
 \label{uvm:sec:eval:design:counters}
 
@@ -461,19 +460,18 @@ Figure~\ref{uvm:fig:eval:access_counter_gh200} compares {\uvmname} (U1)
 The effect of access counters is non-monotonic in oversubscription pressure
     and breaks into three regimes.
 
-\textbf{Before oversubscription (bsz 32, 40).}
+\textbf{Before oversubscription (bsz 32).}
 Access counters add no measurable overhead in the unoversubscribed regime:
-    U1 and U2 are within noise of each other
-    (24.18s vs. 24.12s at bsz 32, and 48.01s vs. 47.85s at bsz 40),
-    and both match the in-memory baseline at bsz 32 (C1: 23.02s).
+    U1 and U2 are within noise of each other at bsz 32,
+    matching the in-memory baseline (C1).
 Counter-driven migration is only triggered when pages cross the migration threshold,
     so when no pages are being faulted in cold from host
     the mechanism is effectively dormant.
 
-\textbf{Onset of thrashing (bsz 48, $1.06\times$).}
+\textbf{Onset of thrashing (bsz 40, 48; $1.06$--$1.19\times$).}
 At light active oversubscription
     access counters mitigate thrashing:
-    U2 finishes in 158.57s while U1 takes 226.66s ($1.43\times$ faster).
+    U2 is $1.43\times$ faster than U1.
 At this point the working set just exceeds HBM,
     so a small set of hot pages is being faulted in repeatedly;
     counters quickly identify those pages
@@ -482,19 +480,18 @@ At this point the working set just exceeds HBM,
 
 \textbf{Heavier thrashing (bsz 56, 64).}
 As oversubscription grows further the trend reverses:
-    U2 takes 845.58s vs. U1's 707.20s at bsz 56,
-    and 1219.93s vs. 787.98s at bsz 64
-    (up to $1.55\times$ \emph{slower} with access counters).
+    U2 is up to $1.55\times$ \emph{slower} than U1
+    at bsz 56 and 64.
 Once a large fraction of the working set is hot,
     the counters cannot promote pages in time
     --- by the construction of the driver's static threshold,
     a page must be touched several times from the GPU
     before it is migrated ---
-    so most accesses still pay the full UVM page-fault round-trip,
+    so accesses still pay the full GPU-to-CPU round-trip,
     and the additional accounting and migration traffic
     becomes net overhead rather than net benefit.
 
-The take-away is that the absolute benefit of access counters
+The takeaway is that the absolute benefit of access counters
     depends sharply on the working-set profile,
     even within a single workload (OPT-13B inference) on a single platform.
 The current UVM driver uses a fixed migration threshold,
@@ -502,9 +499,8 @@ The current UVM driver uses a fixed migration threshold,
     but is too conservative under heavier thrashing
     and pays for itself only narrowly.
 A dynamic threshold that adapts to the observed fault rate and reuse distance
-    --- as explored in concurrent work by Ziyi et al.~\cite{TODO:ziyi-ac} ---
-    would let the mechanism remain helpful at bsz 48
-    without becoming a tax at high oversubscription ratio.
+    would let the mechanism remain helpful at higher oversubscription ratio.
+    % without becoming a tax at high oversubscription ratio.
 \paragraph{Trade-off of No migration}
 \label{uvm:sec:eval:design:direct}
 
@@ -528,8 +524,7 @@ A dynamic threshold that adapts to the observed fault rate and reuse distance
 
 \paragraphb{H100 PCIe}
 The thrashing we observed for U1 in \S\ref{uvm:sec:eval:design:discard}
-    is a direct consequence of the default UVM migration policy
-    enabled by \texttt{cudaMemAdvise(\dots, SetPreferredLocation = device)}:
+    is a direct consequence of the default UVM migration policy:
     whenever the GPU touches a non-resident page,
     the driver eagerly faults it in
     and, if necessary, evicts another page to make room.
@@ -546,20 +541,20 @@ The effect breaks into three regimes.
 \textbf{Active oversub $<$ 1 (bsz 32).}
 When the live working set still fits on the GPU,
     disabling migration is strictly detrimental:
-    U3 takes 34.92s vs.\ U1's 22.75s ($1.54\times$ slower).
+    U3 is $1.54\times$ slower than U1.
 There is no thrashing to avoid:
-    UVMDiscard already lets the allocator keep only the live pages resident
+    framework-guided eviction already lets the allocator keep only the live pages resident
     and silently drop cached/freed ones,
     so U1's placement is essentially optimal.
 U3 just replaces each one-time page-in with a per-access PCIe round-trip,
-    most visibly in prefill
-    (8019 tok/s for U3 vs.\ 20317 tok/s for U1).
+    most visibly in prefill,
+    where U3's throughput is $\sim$$2.5\times$ lower than U1's.
 
 \textbf{Moderate oversub (bsz 40, 48).}
 Once the active working set just exceeds HBM,
     disabling migration is a decisive win:
-    U3 finishes in 237.54s vs.\ U1's 2500.63s at bsz 40 ($10.5\times$),
-    and 415.93s vs.\ 2887.40s at bsz 48 ($6.94\times$).
+    U3 is $10.5\times$ faster than U1 at bsz 40
+    and $6.94\times$ faster at bsz 48.
 Here U1's eager fault-in becomes counterproductive
     --- a page is migrated in, displaces another page that is touched again shortly after,
     and the displaced page is faulted back in ---
@@ -570,9 +565,9 @@ U3 short-circuits the cycle by leaving those pages on host,
 \textbf{Heavier thrashing (bsz 56, 64).}
 As oversubscription grows further the working set itself grows,
     and accessing all of it over PCIe stops being viable:
-    U3 fails to complete within the 3-hour timeout ($>$$10{,}800$\,s)
+    U3 fails to complete within the 3-hour timeout
     at bsz 56 and 64,
-    while U1 still completes in 3526.87s and 3923.18s respectively.
+    while U1 still completes.
 With $1.48\times$--$1.65\times$ active oversubscription,
     every layer streams through hundreds of MiB of weights and KV per step;
     if none of that is allowed to migrate,
@@ -581,7 +576,7 @@ U1 can at least keep some hot pages resident
     and amortize their fault-in across many accesses,
     so even with heavy fault traffic it beats raw zero-copy by more than an order of magnitude.
 
-The take-away is that whether migration helps or hurts
+The takeaway is that whether migration helps or hurts
     depends on how much of the working set is hot and how fast the host link is.
 On PCIe Gen-4 H100 the eager-migration default is right
     at low and very high oversubscription,
@@ -589,7 +584,7 @@ On PCIe Gen-4 H100 the eager-migration default is right
     where in-place access avoids the eviction-and-refault cycle
     and recovers up to $10.5\times$.
 We expect this picture to shift on GH200,
-    whose $\sim$$900$\,GB/s NVLink-C2C link makes in-place access far cheaper
+    whose $\sim$$450$\,GB/s/dir NVLink-C2C link makes in-place access far cheaper
     and should extend the regime where U3 beats U1;
     a full GH200 sweep is left to future work.
 
@@ -625,9 +620,7 @@ This confirms that ATS-based SAM introduces no overhead
 However, as soon as the active working set exceeds GPU memory (batch size $40$ and beyond),
     the SAM path's performance collapses.
 At batch size $40$ (active oversubscription $1.06\times$),
-    U4 takes $7157.43$\,s to complete,
-    while U1 finishes in $48.01$\,s
-    --- a $149\times$ slowdown.
+    U4 is $149\times$ slower than U1.
 At batch sizes $56$ and above, U4 times out after 3 hours ($>$$10{,}800$\,s).
 Adding access-counter--based migration to the SAM path (U5)
     fails to rescue performance;
@@ -652,10 +645,8 @@ On the same OPT-13B / 16-concurrent-prompt configuration
     used in \S\ref{uvm:sec:eval:oversub:prompts},
     the HMM-backed run takes \emph{over 3 hours}
     to complete a single end-to-end inference
-    ($>$$10{,}800$\,s),
-    while {\uvmname} on top of \texttt{cudaMallocManaged}
-    finishes the same workload in $8.92$\,s
-    --- a slowdown of more than $1200\times$.
+    --- more than $1200\times$ slower than {\uvmname}
+    on top of \texttt{cudaMallocManaged}.
 
 The order-of-magnitude gap reflects the cost of HMM's per-fault path on H100 PCIe.
 Every device access to a host page is resolved through
@@ -699,24 +690,24 @@ We compare against the most-favorable configuration
 
 Before oversubscription (bsz 24, 32),
     {\uvmname} (U1) and cudaMempool (M) are essentially equivalent
-    (M: 13.64s vs. U1: 16.55s at bsz 24; 22.75s vs. 24.18s at bsz 32).
+    (within noise at bsz 24 and 32).
 Once the workload becomes oversubscribed, however, the two diverge sharply:
-    at bsz 40 ($1.06\times$) cudaMempool takes 2500.63s vs.\ {\uvmname}'s 48.01s
-    ($52\times$ slowdown),
-    the gap stays large through bsz 64 (3923.18s vs.\ 787.98s, $5.0\times$),
+    at bsz 40 ($1.06\times$ oversubscribed) cudaMempool is $52\times$ slower than {\uvmname},
+    the gap stays large through bsz 64 ($5.0\times$),
     and at bsz 72 ($1.83\times$) cudaMempool exhausts host memory and OOMs entirely
-    while {\uvmname} still completes (985.75s).
+    while {\uvmname} still completes.
 The cause is that cudaMempool retains pooled allocations indefinitely
     and never returns the underlying UVM-managed pages to the driver,
     so its reserved working set grows monotonically
-    and the driver is forced to evict and re-fault
-    a far larger pool of pages than the live working set;
-    the host-OOM at bsz 72 is the same failure mode pushed to its limit.
+    and the driver is forced to handle a much larger working set than the real active footprint.
+    The host-OOM at bsz 72 is the same failure mode pushed to its limit.
 
 This is not a fundamental limitation of the mempool design.
-The cudaMempool API already exposes a release threshold and explicit trim hooks
-    (\texttt{cudaMemPoolAttrReleaseThreshold}, \texttt{cudaMemPoolTrimTo}),
-    and extending those to actively release UVM-managed pages
-    when the pool grows beyond a target footprint
-    would let a UVM-aware cudaMempool recover most of {\uvmname}'s behavior
-    while keeping the API's broader applicability.
+We believe that a mempool implementation with {\uvmname}-style active garbage collection could recover most of {\uvmname}'s performance
+    while still being a general-purpose allocator for any CUDA application.
+% The cudaMempool API already exposes a release threshold and explicit trim hooks
+%     (\texttt{cudaMemPoolAttrReleaseThreshold}, \texttt{cudaMemPoolTrimTo}),
+%     and extending those to actively release UVM-managed pages
+%     when the pool grows beyond a target footprint
+%     would let a UVM-aware cudaMempool recover most of {\uvmname}'s behavior
+%     while keeping the API's broader applicability.

@@ -26,13 +26,15 @@ In contrast, driver-managed automatic memory such as CUDA Unified Virtual Memory
     offers another way past the GPU memory wall.
 UVM lets the GPU transparently access CPU and peer-GPU memory,
     enabling oversubscription without application-specific offload code---in principle,
-    it could retire much of the bespoke machinery that manual paths require.
-In practice, however, UVM has been considered too slow for production:
+    it could retire much of the application-specific offloading code that requires manual intervention.
+
+However, UVM has limited adoption in practice
+    since it has been considered too slow for production:
     PyTorch's own documentation advises against \texttt{cudaMallocManaged},
     the default UVM allocator.
 Prior work reports that UVM is over $5\times$ slower than
     application-level offloading on LLM workloads~\cite{infinigen}.
-The gap is two-fold.
+This slowdown stems from two root causes.
 First, frameworks such as PyTorch and vLLM
     offer no first-class UVM integration,
     so managed allocations bypass their caching and pooling optimizations
@@ -41,30 +43,39 @@ Second, the driver has no visibility into high-level access patterns,
     so page faults and migrations are triggered late and often evict data
     that the application is about to reuse.
 
-We present {\uvmname}, an application-aware UVM substrate for PyTorch
+We present {\uvmname}, a framework-aware UVM substrate for PyTorch
     that closes this performance gap and turns UVM
     into a practical tool for LLM inference.
-{\uvmname} is built around three pieces that propagate
+{\uvmname} is built around two pieces that propagate
     application-level intent down to the UVM driver
     without changing model code.
 First, a \emph{custom UVM-aware caching allocator}
-    proactively returns cached memory to the driver when the GPU is oversubscribed,
-    avoiding the OOM kills that naive UVM caching suffers.
-Second, a \emph{discard-based eviction} strategy
+    retains UVM allocations in PyTorch's user-space memory pool
+    and reuses them for future allocations,
+    hiding the per-allocation driver overhead
+    that makes default UVM slow.
+Its active garbage collection returns cached memory to the driver under oversubscription,
+    avoiding the host OOM kills that a naive caching layer on UVM would suffer.
+Second, a \emph{framework-guided eviction} strategy
     marks partially-free cached blocks as evictable
     so the driver can reclaim them without copying their data back to host.
 % Third, \emph{prefetching with location hints}
 %     hides GPU page-fault latency on reuse
 %     by warming the next layer's tensors before they are needed.
 
-Even with these optimizations, page-fault migration still degenerates into thrashing
+Even with these two mechanisms, page-fault migration still degenerates into thrashing
     once the working set substantially exceeds GPU memory:
-    every fault-in forces an eviction of a page that is itself about to be re-used,
-    and discard reduces eviction cost but does not break the eviction--re-fault cycle.
+    every fault-in evicts a page that is itself about to be reused,
+    and because the driver has no view into the application,
+    it often evicts exactly the page the GPU will touch next.
+Framework-guided eviction softens this---%
+    the driver reclaims already-freed blocks without copying them back to host---%
+    but it cannot break the eviction--re-fault cycle
+    once the live working set itself no longer fits on the GPU.
 We therefore explore two complementary mechanisms.
 \emph{Direct CPU-memory access} leaves cold pages on host
     and lets the GPU read them in place over the interconnect,
-    short-circuiting the eviction--re-fault cycle entirely.
+    short-circuiting that cycle entirely.
 \emph{Access-counter--based migration} defers fault-in until a page
     has been touched above a threshold,
     filtering one-shot accesses that would otherwise pay full migration cost

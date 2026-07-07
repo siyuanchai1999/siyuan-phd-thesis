@@ -26,14 +26,14 @@ The root cause is two-fold:
         provide no first-class support for UVM,
         so UVM bypasses their caching and allocation optimizations.
 
-We present {\uvmname}, an application-aware UVM substrate for PyTorch
+We present {\uvmname}, a framework-aware UVM substrate for PyTorch
     that closes this performance gap and turns UVM
     into a practical tool for LLM inference.
 {\uvmname} introduces three pieces:
     a \emph{custom UVM-aware caching allocator}
-        that proactively returns cached memory to CUDA when the GPU is oversubscribed,
+        that actively returns cached memory to CUDA when the GPU is oversubscribed,
         avoiding the OOM kills that naive UVM caching suffers;
-    a \emph{discard-based eviction} strategy
+    a \emph{framework-guided eviction} strategy
         that uses \texttt{cudaMemDiscardBatchAsync} to mark partially-free
         cached blocks as evictable without copying their data back to the host;
     and \emph{prefetching with location hints}

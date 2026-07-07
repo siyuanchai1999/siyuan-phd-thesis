@@ -42,12 +42,12 @@ Each framework, however, re-implements its own offloading logic
 Unified Virtual Memory (UVM) is a CUDA driver-level feature
     that lets GPU kernels access memory of the CPU and of peer GPUs
     transparently, without explicit programmer-managed copies.
-On allocation through \texttt{cudaMallocManaged},
-    pages are owned by the runtime
-    and migrated on demand between CPU and GPU
-    in response to GPU page faults
-    (or proactively via hints such as \texttt{cudaMemAdvise}
-    and \texttt{cudaPrefetchAsync}).
+On allocation through the \texttt{cudaMallocManaged} API,\footnote{Conventional GPU allocations use \texttt{cudaMalloc}, which allocates device-resident memory and does not support oversubscription.}
+    pages are owned by the CUDA runtime
+    and are migrated on demand between the CPU and GPU.
+    % in response to GPU page faults
+    % (or proactively via hints such as \texttt{cudaMemAdvise}
+    % and \texttt{cudaPrefetchAsync}).
 
 UVM is a natural systems-level answer to the GPU memory wall
     because it offers three properties that are otherwise
@@ -68,9 +68,10 @@ UVM is a natural systems-level answer to the GPU memory wall
 \end{enumerate}
 
 On modern hardware with coherent CPU--GPU interconnects
-    (e.g., NVLink-C2C on GH200),
-    these properties become even more attractive
-    because the marginal cost of CPU-resident accesses drops sharply.
+    (e.g., NVLink-C2C on GH200, $\sim$$450$\,GB/s/dir),
+    these properties become even more attractive:
+    the high interconnect bandwidth makes CPU-resident accesses far cheaper.
+    % the marginal cost of CPU-resident accesses drops sharply.
 
 
 \subsubsection{Performance Gap of UVM}
@@ -89,8 +90,8 @@ We evaluate Hugging~Face OPT-13B inference on an H100 PCIe GPU across a range of
 When the working set fits in GPU memory (\figurename~\ref{uvm:fig:motivation}a),
     vanilla PyTorch with its native \texttt{cudaMalloc}-based caching allocator (C1)
     is highly efficient.
-In contrast, naive UVM without caching (U0) is $53\times$--$69\times$ slower than C1,
-    and even application-level KV-cache offloading (A) is $31\times$--$42\times$ slower
+In contrast, UVM (U0), implemented with PyTorch's \texttt{CUDAPluggableAllocator} interface, is $53\times$--$69\times$ slower than C1,
+    and application-level KV-cache offloading (A) is $31\times$--$42\times$ slower
     due to the overhead of moving data over PCIe.
 When we increase the batch size to oversubscribe the GPU memory (\figurename~\ref{uvm:fig:motivation}b),
     the native allocator (C1) crashes with an out-of-memory (OOM) error.
@@ -116,10 +117,10 @@ Naive UVM (U0) also survives, but its performance collapses:
     \end{subfigure}
     \caption{Performance gap of UVM for Hugging~Face OPT-13B inference on H100 PCIe.
         (a)~When the working set fits in GPU memory (batch sizes $8$--$24$),
-        naive UVM (U0) is over $50\times$ slower than vanilla PyTorch (C1).
+        default UVM (U0) runs over $50\times$ slower than vanilla PyTorch (C1).
         (b)~When the GPU is oversubscribed (batch sizes $32$--$64$),
-        vanilla PyTorch crashes with OOM,
-        and naive UVM thrashes, running up to $5\times$ slower than application-level KV-cache offloading (A).}
+        UVM avoids OOM but thrashes,
+        running up to $5\times$ slower than application-level KV-cache offloading (A).}
     \label{uvm:fig:motivation}
 \end{figure}
 
@@ -140,42 +141,61 @@ As a result, UVM suffers long GPU page-fault handling latencies,
 \paragraphb{Inadequate framework support}
 Modern AI frameworks such as PyTorch
     are built around their own caching allocators
-    (e.g., the \texttt{CUDACachingAllocator} on top of \texttt{cudaMalloc}),
-    which assume that allocated memory is strictly device-resident.
+    (e.g., the \texttt{CUDACachingAllocator} on top of \texttt{cudaMalloc}).
+Using UVM with PyTorch today requires routing allocations through the
+    \texttt{CUDAPluggableAllocator} interface,
+    which bypasses this caching layer and allocates directly from the driver.
+Every allocation and deallocation therefore reaches the driver,
+    and each one must synchronize against all in-flight GPU kernels
+    to avoid use-after-free errors,
+    incurring substantial per-operation overhead.
+
 Naively replacing \texttt{cudaMalloc} with \texttt{cudaMallocManaged}
-    breaks key assumptions:
-    the allocator never returns memory to CUDA
-    (since \texttt{cudaMalloc} never appears to fail),
-    so the host kernel's OOM killer eventually terminates the process
-    long before UVM's spilling mechanism would naturally kick in.
-Vanilla UVM thus bypasses framework-level caching
-    while simultaneously breaking framework-level assumptions about residency.
+    inside the caching allocator is not viable either.
+The caching allocator relies on an allocation failure
+    to trigger garbage collection and return memory to the driver,
+    but \texttt{cudaMallocManaged} never fails---it simply spills to host memory.
+A direct substitution therefore breaks this assumption,
+    causing either host OOM kills or an unbounded UVM working set
+    that destroys performance.
 
-\subsubsection{PyTorch Memory Management}
-\label{uvm:sec:bg:pytorch}
+PyTorch has never built first-class UVM integration
+    because UVM's degraded performance has left it impractical for production workloads.
+To the best of our knowledge, our work is the first attempt
+    to build a framework-aware UVM substrate for a production AI framework.
+%     breaks key assumptions:
+%     the allocator never returns memory to CUDA
+%     (since \texttt{cudaMalloc} never appears to fail),
+%     so the host kernel's OOM killer eventually terminates the process
+%     long before UVM's spilling mechanism would naturally kick in.
+% Vanilla UVM thus bypasses framework-level caching
+%     while simultaneously breaking framework-level assumptions about residency.
 
-PyTorch manages GPU memory through its
-    \texttt{CUDACachingAllocator}~\cite{pytorch-cuda-allocators},
-    a user-space caching allocator built atop \texttt{cudaMalloc}.
-Two notions of memory are central to our discussion:
-\begin{enumerate}
-\item \emph{Active memory}: memory blocks
-    currently held by live PyTorch tensors and used in computation.
-\item \emph{Reserved memory}: memory the allocator has obtained from CUDA
-    and not yet released back.
-\end{enumerate}
-Reserved memory is typically larger than active memory because
-    (i)~the allocator retains freed blocks in its cache to amortize
-        \texttt{cudaMalloc} cost on future allocations, and
-    (ii)~a cached block may be partially reused
-        to satisfy a smaller request,
-        leaving the remainder fragmented but still pinned to the GPU.
-This caching policy is critical for performance
-    on \texttt{cudaMalloc} but,
-    as we show later,
-    interacts poorly with naive UVM
-    and creates the very fragmentation that motivates
-    {\uvmname}'s discard-based eviction.
+% \subsubsection{PyTorch Memory Management}
+% \label{uvm:sec:bg:pytorch}
+
+% PyTorch manages GPU memory through its
+%     \texttt{CUDACachingAllocator}~\cite{pytorch-cuda-allocators},
+%     a user-space caching allocator built atop \texttt{cudaMalloc}.
+% Two notions of memory are central to our discussion:
+% \begin{enumerate}
+% \item \emph{Active memory}: memory blocks
+%     currently held by live PyTorch tensors and used in computation.
+% \item \emph{Reserved memory}: memory the allocator has obtained from CUDA
+%     and not yet released back.
+% \end{enumerate}
+% Reserved memory is typically larger than active memory because
+%     (i)~the allocator retains freed blocks in its cache to amortize
+%         \texttt{cudaMalloc} cost on future allocations, and
+%     (ii)~a cached block may be partially reused
+%         to satisfy a smaller request,
+%         leaving the remainder fragmented but still pinned to the GPU.
+% This caching policy is critical for performance
+%     on \texttt{cudaMalloc} but,
+%     as we show later,
+%     interacts poorly with naive UVM
+%     and creates the very fragmentation that motivates
+%     {\uvmname}'s framework-guided eviction.
 
 % \subsubsection{Modern Hardware: PCIe vs.\ Coherent Links}
 % \label{uvm:sec:bg:hw}

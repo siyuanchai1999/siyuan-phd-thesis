@@ -6,13 +6,14 @@ CUDA Unified Virtual Memory (UVM) offers a transparent alternative,
     but is considered too slow for production---prior work reports
     over $5\times$ slowdowns relative to manual offloading.
 
-We present {\uvmname}, an application-aware UVM substrate for PyTorch
+We present {\uvmname}, a framework-aware UVM substrate for PyTorch
     that closes this gap without changing model code.
 {\uvmname} contributes (1) a \emph{UVM-aware caching allocator}
-    that proactively returns cached memory to the driver under oversubscription,
-    avoiding the OOM kills that naive UVM caching suffers,
-    and (2) \emph{discard-based eviction},
-    which marks cached blocks as reclaimable without copying data back to host.
+    that pools and reuses UVM allocations to hide per-allocation driver overhead
+    and returns cached memory to the driver under oversubscription
+    to avoid the host OOM kills that a naive caching layer on UVM would suffer;
+    and (2) \emph{framework-guided eviction},
+    which marks partially-free cached blocks as reclaimable without copying data back to host.
 For workloads where the active working set substantially exceeds GPU memory,
     we further study \emph{direct CPU-memory access} and
     \emph{access-counter--based migration} to mitigate page-fault thrashing.

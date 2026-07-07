@@ -9,7 +9,7 @@
 \label{uvm:sec:design:caching}
 
 The first piece of {\uvmname} is a UVM-aware,
-    user-space caching allocator that lifts the
+    user-space caching allocator that removes the
     \texttt{cudaMallocManaged}/\texttt{cudaFree} traffic off the critical path.
 Without it, the most natural way to plug UVM into PyTorch---%
     a \texttt{CUDAPluggableAllocator} that forwards every allocation
@@ -42,29 +42,31 @@ Its block-management policy mirrors the native allocator:
     rather than calling \texttt{cudaFree}.
 As a result, only a small fraction of PyTorch-level allocations
     translates into a \texttt{cudaMallocManaged} call,
-    and freed blocks remain warm for fast reuse.
+    and freed blocks remain available for fast reuse without triggering additional GPU driver operations.
 Because the underlying memory is managed by UVM,
     these cached blocks are still eligible for transparent CPU spilling
     when the GPU is oversubscribed,
-    so {\uvmname} retains both the throughput of caching
-    and the oversubscription guarantees of UVM.
+    so {\uvmname} retains UVM's oversubscription guarantees.
 
-\paragraphb{UVM-Specific Proactive Garbage Collection}
-Naively reusing the native caching policy on top of UVM is, however, unsafe.
-The native allocator relies on \texttt{cudaMalloc} returning OOM
+\paragraphb{UVM-Specific Active Garbage Collection}
+Naively reusing the native caching policy on top of UVM is, however, unsustainable.
+The native allocator relies on \texttt{cudaMalloc} failing an allocation
     as a back-pressure signal:
     when CUDA refuses a new allocation,
-    the allocator invokes its garbage collector,
-    releases cached blocks via \texttt{cudaFree},
+    the caching allocator interprets this as memory pressure,
+    invokes its garbage collector to release cached blocks via \texttt{cudaFree},
     and retries.
+    The retry then draws on the just-freed memory,
+    which CUDA can coalesce into a region large enough to satisfy the request.
 With \texttt{cudaMallocManaged}, no such signal ever arrives---%
     the call simply succeeds by spilling pages to host memory.
 Consequently, a UVM-backed caching allocator
     keeps growing its reservation indefinitely:
     GPU-resident pages overflow into CPU memory,
-    cached but unused blocks are never returned,
-    and the host kernel eventually OOM-kills the process
-    long before UVM's spilling mechanism can stabilize the working set.
+    cached but unused blocks are never returned.
+This produces an unbounded UVM working set that destroys application performance,
+    and in extreme cases the host kernel OOM-kills the process
+    once CPU memory is exhausted.
 
 To eliminate this failure mode,
     {\uvmname} replaces the missing OOM signal
@@ -76,7 +78,7 @@ Before satisfying an allocation that would require
     $s + \texttt{gpu\_reserved}$ would exceed the physical GPU memory,
     where $\texttt{gpu\_reserved}$ is the total bytes
     the allocator has already obtained from CUDA.
-If so, it triggers proactive garbage collection:
+If so, it triggers active garbage collection (GC):
     it walks its free-block list,
     releases reclaimable blocks back to CUDA via \texttt{cudaFree},
     and retries the allocation.
@@ -85,15 +87,16 @@ This keeps the allocator's reservation bounded
     so UVM is only ever asked to oversubscribe
     on \emph{live} working-set growth,
     not on stale cached blocks---%
-    avoiding the runaway CPU-side allocation that breaks naive UVM caching.
+    avoiding the unbounded host-memory growth
+    that makes naive UVM caching unsustainable.
 
 \paragraphb{Outcome}
-Together, user-space caching and UVM-specific proactive GC
+Together, user-space caching and UVM-specific active GC
     turn UVM from an unusable substrate into a competitive one.
 On the non-oversubscribed regime,
     {\uvmname}'s allocator is within a small overhead of vanilla PyTorch,
     delivering $51\times$ speedup over the pluggable-allocator UVM baseline
-    and $16\times$ speedup over Hugging~Face's KV-cache offloading,
+    and $30\times$ speedup over Hugging~Face's KV-cache offloading,
     while transparently enabling oversubscription
     without any application-level changes.
 What remains, and what motivates the rest of this section,
@@ -102,10 +105,10 @@ What remains, and what motivates the rest of this section,
     creating fragmentation patterns that pure GC cannot resolve
     (\S\ref{uvm:sec:design:discard}).
 
-\subsubsection{Guided Eviction with UVMDiscard}
+\subsubsection{Framework-Guided Eviction with UVMDiscard}
 \label{uvm:sec:design:discard}
 
-User-space caching plus proactive GC stabilizes {\uvmname}'s reservation
+User-space caching plus active GC stabilizes {\uvmname}'s working set
     only when freed blocks can be returned to CUDA whole.
 In real PyTorch workloads, however,
     cached blocks are routinely \emph{split} to satisfy smaller allocations,
@@ -118,11 +121,12 @@ This couples caching with fragmentation in a way
     PyTorch-level information would otherwise let us avoid.
 
 Consider a sequence that allocates two $40$\,GiB blocks,
-    frees them, then allocates two $25$\,GiB tensors
-    that each carve a $25$\,GiB-used / $15$\,GiB-free split out of a cached block.
-A subsequent $30$\,GiB allocation cannot be served from the cache:
-    the two $15$\,GiB free fragments are non-contiguous
-    and live inside still-live $40$\,GiB \texttt{cudaMallocManaged} regions,
+    frees them, then allocates two $25$\,GiB tensors.
+It produces two sets of $25$\,GiB-used / $15$\,GiB-free split out of a cached block.
+A subsequent $30$\,GiB allocation cannot be served from the cache.
+The two $15$\,GiB free fragments are non-contiguous virtually,
+    so it can not satisfy the request.
+What'sm more, they live inside still-live $40$\,GiB \texttt{cudaMallocManaged} regions,
     so GC cannot return them to CUDA either.
 The allocator must therefore obtain a fresh $30$\,GiB region from CUDA,
     which on a now-reserved-full GPU forces UVM
@@ -140,16 +144,15 @@ Worse, the driver picks evictees from
 Before issuing a new \texttt{cudaMallocManaged}
     when $\texttt{new\_size} + \texttt{gpu\_reserved} > \texttt{gpu\_total}$,
     the allocator (i)~\texttt{cudaFree}s independent (fully unused) cached blocks,
-    as in proactive GC,
+    as in active GC,
     and then (ii)~for any cached block that is split into used and free fragments,
-    invokes \texttt{cudaMemDiscardBatchAsync} on the free fragments
-    to mark them discardable to the UVM driver.
+    marks them discardable to the UVM driver with UVMDiscard~\cite{uvmdiscard}.
 Discard requires no application change:
     {\uvmname} already tracks the exact byte-range layout of every cached block
     as part of its allocator metadata,
-    so identifying the partially-freed sub-regions is a constant-time lookup.
+    so identifying the partially-freed sub-regions is a cheap lookup with no involvement from the GPU.
 Crucially, the live fragments of the same block are left untouched,
-    so existing tensors retain their virtual-address mappings
+    so all existing tensors retain their virtual-address mappings
     and continue to fault and migrate as usual.
 
 \paragraphb{Higher-Priority, Copy-Free Eviction}
@@ -171,119 +174,73 @@ For the fragmentation example above,
 
 \paragraphb{Guiding UVM Away from Useless Data}
 The combined effect is that {\uvmname} converts
-    PyTorch-level "I no longer need these bytes" information
-    into a UVM-level eviction hint
-    that the driver can act on at page-fault time,
-    without copying or evicting useful data.
-This shifts the dominant source of eviction traffic
-    from data the application still cares about
-    to data the application has already discarded,
+    PyTorch-level knowledge of which bytes are no longer needed
+    into a UVM-level eviction hint that the driver can act on
+    at the next GPU page fault or allocation,
+    without copying or evicting live data.
+This redirects the dominant source of eviction traffic
+    from data the application still needs
+    to data it has already discarded,
     cutting both eviction volume and end-to-end latency.
-Empirically, discard makes UVM
-    $1.6\times$ faster than the {\uvmname} configuration without discard
-    and $27\times$ faster than Hugging~Face's KV-cache offloading
-    on OPT-13B,
-    even though the underlying allocator,
-    proactive GC,
-    and prepopulation policy are otherwise identical.
+Empirically, discard makes UVM up to 
+    $1.6\times$ faster than the {\uvmname} configuration without it
+    and $27\times$ faster than Hugging~Face's KV-cache offloading on OPT-13B.
 
 \subsubsection{Thrashing Mitigation Exploration}
 \label{uvm:sec:design:thrash}
-By default, {\uvmname} treats every CPU-resident page as a candidate for migration:
-    when the GPU touches a non-resident page,
-    the UVM driver faults it in
-    so that subsequent accesses hit local HBM.
-This is the right policy at low oversubscription
-    --- it maximizes the fraction of the working set that lives on the GPU ---
-    but at high oversubscription it degenerates into thrashing,
-    because every fault-in implicitly forces an eviction
-    of some other page that may itself be touched again moments later.
-UVMDiscard (\S\ref{uvm:sec:design:discard}) reduces the cost of those evictions
-    but does not prevent the eviction--re-fault cycle itself,
-    and we observe that even with discard enabled
-    LLM-inference workloads on a discrete-PCIe GPU
-    spend most of their wall time on this cycle once oversubscription is significant.
-
-We explore two complementary mechanisms that attack the cycle directly,
-    by changing \emph{when} a page should be migrated rather than
-    how cheaply it can be evicted.
+By default, {\uvmname} faults in every GPU-touched page so that subsequent accesses hit local HBM.
+This maximizes GPU residency at low oversubscription,
+    but at high oversubscription it thrashes:
+    every fault-in forces an eviction of a page that may itself be touched again moments later.
+UVMDiscard (\S\ref{uvm:sec:design:discard}) cuts the cost of each eviction
+    but not the eviction--re-fault cycle itself,
+    which dominates wall time for LLM inference on a discrete-PCIe GPU once oversubscription is significant.
+We explore two mechanisms that attack the cycle by changing \emph{when} a page migrates.
 
 \paragraphb{Direct CPU-Memory Access}
-Instead of migrating pages on every fault,
-    {\uvmname} can advise the driver to leave them on host
-    (\texttt{cudaMemAdvise(\ldots, cudaMemAdviseSetPreferredLocation, hostId)})
-    and let the GPU access them in place over the CPU--GPU interconnect.
-No eviction or migration is incurred,
-    so the eviction--re-fault cycle is short-circuited entirely
-    --- the GPU pays a higher per-access latency
-    in exchange for eliminating page-fault traffic.
-This is most useful when the alternative would have been a near-immediate eviction anyway,
-    i.e., when oversubscription is high enough that
-    every fault-in steals a page that is itself still hot,
-    and when the CPU--GPU link has enough bandwidth
-    to absorb in-place accesses without becoming the new bottleneck.
-We evaluate this trade-off on H100 PCIe in \S\ref{uvm:sec:eval:design:direct}.
+Rather than migrate on every fault,
+    {\uvmname} can advise the driver to keep pages on host
+    (with \texttt{cudaMemAdvise} call)
+    and let the GPU access them in place over the interconnect,
+    trading higher per-access latency for the elimination of page-fault traffic.
+This wins when the alternative would have been a near-immediate eviction
+    and the CPU--GPU link has bandwidth to absorb in-place accesses.
+We evaluate it on H100 PCIe in \S\ref{uvm:sec:eval:design:direct}.
 
 \paragraphb{Access-Counter--Based Migration}
-Modern NVIDIA GPUs maintain per-page access counters for UVM-managed memory,
-    and the driver can be configured to defer migration
-    until a host-resident page has been touched
-    above a threshold number of times from the device.
-This filters out one-shot accesses
-    --- which would otherwise pay the cost of a full migration only to be evicted shortly after ---
-    while still promoting genuinely hot pages to the GPU.
-At present, access counters are only exposed on Grace-based systems
-    with $64$\,KiB UVM pages,
-    so we evaluate this mechanism on GH200 in \S\ref{uvm:sec:eval:design:counters};
-    extending it to discrete-PCIe H100 (with $4$\,KiB pages)
-    is contingent on driver support that is not yet available.
+NVIDIA GPUs maintain per-page access counters, and the driver can defer migration
+    until a host page is touched above a threshold from the device,
+    filtering out one-shot accesses while still promoting genuinely hot pages.
+Access counters are currently exposed only on Grace-based systems with $64$\,KiB UVM pages,
+    so we evaluate this on GH200 in \S\ref{uvm:sec:eval:design:counters};
+    extending it to discrete-PCIe H100 ($4$\,KiB pages) awaits driver support.
 
 \subsubsection{Extension to System-Allocated Memory (SAM)}
 \label{uvm:sec:design:sam}
 \texttt{cudaMallocManaged} is not the only way to back UVM.
-\emph{System-Allocated Memory} (SAM) achieves the same UVM properties
+\emph{System-Allocated Memory} (SAM) delivers the same UVM properties
     --- transparent data movement and unified CPU/GPU addressing ---
-    without going through a dedicated CUDA allocator,
-    by letting the GPU access ordinary host pages obtained via
-    \texttt{malloc}/\texttt{free}.
-The OS exposes these pages to the GPU
-    either through ATS (Address Translation Services) on GH200
-    or through Linux's HMM path on x86 / H100,
-    and we port {\uvmname} to both.
-
-Two implementation differences matter when migrating from
-    a \texttt{cudaMallocManaged}-backed UVM allocator
-    to a SAM-backed one.
+    by letting the GPU access ordinary host pages from \texttt{malloc}/\texttt{free},
+    which the OS exposes to the GPU via ATS on GH200 or Linux's HMM path on x86 / H100.
+We port {\uvmname} to both; two differences matter.
 
 \paragraphb{Allocation alignment}
-\texttt{cudaMallocManaged} returns pointers aligned to a coarse boundary
-    (e.g.\ $512$\,B on GH200),
-    and downstream CUDA libraries such as cuBLAS rely on this alignment
-    when issuing tensor-cores and TMA-style accesses.
-\texttt{malloc} provides only the C-ABI minimum alignment,
-    which is finer-grained but insufficient for these consumers.
+\texttt{cudaMallocManaged} returns coarsely aligned pointers (e.g.\ $512$\,B on GH200)
+    that downstream libraries such as cuBLAS rely on for tensor-core and TMA-style accesses,
+    whereas \texttt{malloc} guarantees only the C-ABI minimum.
 {\uvmname}'s SAM allocator therefore uses \texttt{posix\_memalign}
-    to request the same alignment that \texttt{cudaMallocManaged} would have produced,
-    so existing kernels work unchanged.
+    to reproduce the \texttt{cudaMallocManaged} alignment, so existing kernels work unchanged.
 
 \paragraphb{Free-time synchronization}
-\texttt{cudaMallocManaged} and \texttt{cudaFree} are CUDA runtime calls
-    that internally synchronize against in-flight kernels and copies
-    on the allocation's stream(s),
-    so an application can free a buffer while a kernel referencing it is still queued
-    without observing a use-after-free.
-Plain \texttt{malloc}/\texttt{free} provide no such guarantee;
-    on the SAM path, freeing a host page that the GPU is still touching
-    yields exactly that bug.
+\texttt{cudaFree} internally synchronizes against in-flight kernels and copies on the allocation's stream(s),
+    so freeing a buffer while a kernel still references it is safe.
+Plain \texttt{free} offers no such guarantee, so on the SAM path it can yield a use-after-free.
 {\uvmname}'s SAM allocator therefore wraps \texttt{free} with an explicit
-    CUDA-side synchronization of all in-flight work
-    on the streams that may have referenced the allocation,
-    matching the semantics of the \texttt{cudaFree} path.
+    CUDA-side synchronization of in-flight work on the relevant streams, matching \texttt{cudaFree}.
 
-We kept the CUDA-level hint including cudaMemAdvise, cudaMemPrefetchAsync the same for SAM-based UVM.
-UVMDiscard is currently not yet supported for SAM-based UVM.
-
-Evaluation results can be found in \S\ref{uvm:sec:eval:sam}.
+CUDA-level hints (\texttt{cudaMemAdvise}, \texttt{cudaMemPrefetchAsync}) are unchanged for SAM,
+    but UVMDiscard is not yet supported on the SAM path.
+Evaluation results appear in \S\ref{uvm:sec:eval:sam}.
 
 
 % TODO: describe how the same design extends to SAM
