@@ -305,7 +305,6 @@ Basic functions free developers from sophisticated optimizations
 %	should always return an effective translation object, as the outcome of the translation.
 \begin{figure}[H]
 	\centering
-\begin{singlespace}
 \begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 //// Translation Object
 // Read the attribute of an object based on the attribute key
@@ -329,8 +328,7 @@ Basic functions free developers from sophisticated optimizations
 @\codefunc{tsvc\_read\_tdb}@(cpu) @\coderet{->}@ (error, out_tdb)
 ...
 \end{minted}
-\end{singlespace}
-\caption{{\bf Examples of basic functions in the EMT API.}
+\caption{{\bf Examples of basic functions in the EMT API.} 
 	EMT exposes 15 basic functions in total.}
 \label{emt:fig:api}
 \end{figure}
@@ -596,7 +594,6 @@ The routines in this group correspond to
 
 \begin{figure}[H]
 	\centering
-\begin{singlespace}
 \begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 //// Translation Object Iterator
 // Return the current translation object and advance the iterator
@@ -619,7 +616,6 @@ The routines in this group correspond to
 @\codefunc{tobj\_to\_swap}@(tdb, tobj) @\coderet{->}@ (error, swp_entry)
 ...
 \end{minted}
-\end{singlespace}
 \caption{{\bf Example customizable functions in the EMT API.}
 	EMT exposes 
 	% \schaix{34}
@@ -665,7 +661,8 @@ We discuss the iterator group as an example.
 %	features to be implemented without introducing maintenance overhead to architecture independent code.
 
 \begin{figure}[tbp]
-\begin{subfigure}[b]{\textwidth}
+\centering
+\begin{subfigure}[b]{.5\textwidth}
 \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 { ...
@@ -679,7 +676,7 @@ int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 \caption{Default (architecture neutral)}
 \label{emt:code:iternext-gen}
 \end{subfigure}
-\begin{subfigure}[b]{\textwidth}
+\begin{subfigure}[b]{.5\textwidth}
 \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 { ...

@@ -239,6 +239,38 @@ Figure~\ref{emt:fig:eval:microbenchmark} shows the results of \schai{kernel micr
 	due to %\jzx{dependencies}{
 	coding style restriction, %~\cite{linux:code:icache}},
 	which can be further optimized by restructuring the code or forcing inlining.
+
+\begin{figure}[H]
+	\centering
+	\begin{subfigure}[b]{0.8\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{data/radix_lebench_legend.pdf}
+	\end{subfigure}%
+	\vskip\baselineskip
+	\vspace{-20pt}
+	% (a) Micro benchmark: subcaption placed below the plot.
+	% The benchmarks are split across two stacked rows so the per-benchmark
+	% x labels stay legible (see data/src/radix_lebench_split.ipynb).
+	\begin{subfigure}[b]{\columnwidth}
+		\centering
+		\captionsetup{justification=centering, aboveskip=3pt, belowskip=0pt}
+		\includegraphics[width=0.9\textwidth]{data/radix_lebench_1.pdf}\\[3pt]
+		\includegraphics[width=0.9\textwidth]{data/radix_lebench_2.pdf}
+		\caption{Micro benchmark}
+		\label{emt:fig:eval:microbenchmark}
+	\end{subfigure}
+	\vskip\baselineskip
+	% (b) Macro benchmark: stacked vertically below, subcaption on top
+	\begin{subfigure}[b]{\columnwidth}
+		\centering
+		\captionsetup{justification=centering, aboveskip=0pt, belowskip=3pt}
+		\includegraphics[width=0.5\textwidth]{data/radix.pdf}
+		\caption{Macro benchmark}
+		\label{emt:fig:eval:macrobenchmark}
+	\end{subfigure}
+	\caption{\bf Performance overhead of EMT-Linux over vanilla Linux (measured by the micro and macro benchmarks).}
+	\label{emt:fig:eval:eval-stack-lebench}
+\end{figure}
 % \begin{figure}[t]
 % 	\centering
 % 	%\vspace{-12.5pt}
@@ -285,8 +317,6 @@ PostgreSQL & 64 GB  & 21 M & 100:0 & 25 M \\
 		\includegraphics[width=\textwidth]{data/radix_real_app_legend.pdf}
 		% \includegraphics[width=\textwidth]{data/radix_real_app_single_legend.pdf}
 	\end{subfigure}
-
-
 	% Subfigure 1
 	\begin{subfigure}[b]{0.3\textwidth}
 		\centering

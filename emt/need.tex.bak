@@ -3,7 +3,6 @@
 
 \begin{figure}[H]
 	\centering
-\begin{singlespace}
 \begin{minted}[xleftmargin=17.5pt,linenos,breaklines,fontsize=\small,escapeinside=@@]{C}
 void vunmap_pmd_range(pmd, addr, end) {
   @\codetype{pmd\_t}@ *pmd = @\codehl{pmdoff}{pmd\_off}{set(pud}@, addr);
@@ -21,7 +20,6 @@ void vunmap_pmd_range(pmd, addr, end) {
   while (@\codehl{pmdpp}{pmd}{++}@, addr = next, addr != end);
 } /* mm/vmalloc.c */
 \end{minted}
-\end{singlespace}
 \caption{\bf Examples of Linux memory management code that is hardwired to
 radix-tree based translation.} 
 % \jyk{As a reviewer, I am curious how this code example
@@ -153,7 +151,6 @@ struct file_operations {
 
 \begin{figure}[H]
 	\centering
-\begin{singlespace}
 \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 void walk_pte_range(pmd, addr, end, walk) {
   @\codetype{spinlock\_t}@ *ptl;
@@ -169,7 +166,6 @@ void walk_pte_range(pmd, addr, end, walk) {
   pte_unmap_unlock(pte, ptl);
 } /* mm/pagewalk.c */
 \end{minted}
-\end{singlespace}
 
 \caption{\bf Hardware-specific optimizations in Linux.}
 \label{emt:fig:need:linux-performance-opt}

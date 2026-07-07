@@ -501,34 +501,6 @@ that all instructions after it will use the new kECPT.
 % %	\vspace{-5pt}
 % \end{figure}
 
-\begin{figure}[H]
-	\centering
-	\begin{subfigure}[b]{0.5\textwidth}
-		\centering
-		\includegraphics[width=\textwidth]{data/radix_lebench_legend.pdf}
-	\end{subfigure}%
-	\vskip\baselineskip
-	% (a) Micro benchmark: subcaption on top, small gap to the plot
-	\begin{subfigure}[b]{\columnwidth}
-		\centering
-		\captionsetup{justification=centering, aboveskip=0pt, belowskip=3pt}
-		\caption{Micro benchmark}
-		\includegraphics[width=\textwidth]{data/radix_lebench.pdf}
-		\label{emt:fig:eval:microbenchmark}
-	\end{subfigure}
-	\vskip\baselineskip
-	% (b) Macro benchmark: stacked vertically below, subcaption on top
-	\begin{subfigure}[b]{\columnwidth}
-		\centering
-		\captionsetup{justification=centering, aboveskip=0pt, belowskip=3pt}
-		\caption{Macro benchmark}
-		\includegraphics[width=0.45\textwidth]{data/radix.pdf}
-		\label{emt:fig:eval:macrobenchmark}
-	\end{subfigure}
-	\caption{\bf Performance overhead of EMT-Linux over vanilla Linux (measured by the micro and macro benchmarks).}
-	\label{emt:fig:eval:eval-stack-lebench}
-\end{figure}
-
 % We add hardware support for atomic kECPT switching.
 % 	considering current x86 processors already explicitly serialize change to the CR3 register.
 % The MMU provides two sets of kECPT control registers and

@@ -146,13 +146,13 @@ with higher degradation for smaller \texttt{SET} value sizes (<= 64KB).
     \centering
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/eval_core_exp-tput.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/eval_core_exp-tput.pdf}
         \caption{Throughput}
         \label{vfree:fig:eval-core-tput}
     \end{subfigure}
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/eval_core_exp-qi_submit_sync-count_per_page.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/eval_core_exp-qi_submit_sync-count_per_page.pdf}
         \caption{IR-SUB count per page}
         \label{vfree:fig:eval-core-qi}
     \end{subfigure}
@@ -165,7 +165,7 @@ with higher degradation for smaller \texttt{SET} value sizes (<= 64KB).
     % \hfill
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/eval_core_exp-cache_tag_flush_range-mean_ns.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/eval_core_exp-cache_tag_flush_range-mean_ns.pdf}
         \caption{IR processing latency per unmap}
         \label{vfree:fig:eval-core-flush}
     \end{subfigure}
@@ -178,19 +178,19 @@ with higher degradation for smaller \texttt{SET} value sizes (<= 64KB).
     \centering
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/tx-ebpf-tput.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/tx-ebpf-tput.pdf}
         \caption{Throughput}
         \label{vfree:fig:tx-tput}
     \end{subfigure}
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/tx-ebpf-qi_submit_sync-count_per_page.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/tx-ebpf-qi_submit_sync-count_per_page.pdf}
         \caption{IR-SUB count per page}
         \label{vfree:fig:tx-qi}
     \end{subfigure}
     \begin{subfigure}[b]{\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/tx-ebpf-cache_tag_flush_range-mean_ns.pdf}
+        \includegraphics[width=0.6\textwidth]{figures/tx-ebpf-cache_tag_flush_range-mean_ns.pdf}
         \caption{IR processing latency per unmap}
         \label{vfree:fig:tx-flush}
     \end{subfigure} 
@@ -413,15 +413,15 @@ Unlike Tx-server, Figure~\ref{vfree:fig:ablation-rx} shows that for Rx-server, o
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}[b]{\columnwidth}
+    \begin{subfigure}[b]{0.75\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/eval_ablation_tx-tput.pdf}
+        \includegraphics[width=\textwidth]{figures/eval_ablation_tx-tput.pdf}
         \caption{Tx-server}
         \label{vfree:fig:ablation-tx}
     \end{subfigure}
-    \begin{subfigure}[b]{\columnwidth}
+    \begin{subfigure}[b]{0.75\columnwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/eval_ablation_rx-tput.pdf}
+        \includegraphics[width=\textwidth]{figures/eval_ablation_rx-tput.pdf}
         \caption{Rx-server}
         \label{vfree:fig:ablation-rx}
     \end{subfigure}
