@@ -1,145 +1,52 @@
-\section{Conclusion and Future Directions}
+\section{Conclusion}
 \label{chp:conclusion}
 
-% \subsection{Summary}
+% This dissertation argues that the mismatch between modern hardware capabilities and
+% legacy memory management designs is the root cause of critical \emph{performance}
+% bottlenecks---and that targeted, hardware- and workload-aware changes to those systems
+% eliminate the bottlenecks without compromising security or extensibility.
 
-This dissertation argues that the mismatch between modern hardware capabilities and
-legacy system software designs is the root cause of critical bottlenecks in performance,
-security, and extensibility---and that targeted, hardware- and workload-aware changes
-to those software layers suffice to close the gap.
+This dissertation argues that 
+designing memory management systems with deep understanding of hardware capabilities and workload characteristic 
+can eliminate performance bottlenecks without compromising security or extensibility.
 
-We identified three concrete manifestations of this mismatch.
-First, commodity OS kernels remain hardwired to radix-tree page tables,
-blocking experimentation with translation architectures suited to terabyte-scale servers.
+We identified three manifestations of the bottlenecks and addressed each with a targeted system.
+First, address translation has become a major performance bottleneck on terabyte-scale
+servers, yet commodity OS kernels remain hardwired to radix-tree page tables, blocking the
+faster translation architectures that would relieve it.
+\EMTbrand{} gives Linux an extensible, architecture-neutral interface for memory
+translation, enabling OS support for radically different page table structures without
+modifying the kernel for each new design; using it, we port ECPT and FPT---two recent
+hardware schemes for fast translation---to Linux and reveal OS-level challenges invisible
+to hardware-only evaluation.
 Second, strict I/O memory protection in virtualized environments incurs 83--95\% throughput
 degradation from per-DMA VM exits, forcing production deployments to disable it entirely.
-Third, GPU memory oversubscription for AI workloads is unaddressed by the CUDA runtime,
-leaving each framework to implement its own complex offloading logic or suffer
-a more than 5$\times$ performance penalty from default UVM.
+\vFreebrand{} redesigns the Linux IOMMU invalidation protocol around one-for-many
+invalidations and deferred free page, amortizing VM exit costs while preserving strict
+security guarantees, and achieves performance within 1--8\% of an unprotected system---a
+74--147$\times$ improvement over the state of the art.
+Third, GPU memory oversubscription for AI workloads is unaddressed by the CUDA driver,
+leaving each framework to hand-write its own offloading logic or suffer a more than
+5$\times$ penalty from default UVM.
+\pytorchUVMbrand{} integrates a UVM-aware caching allocator and framework-guided eviction
+directly into PyTorch, enabling practical oversubscription for LLM inference without
+modifying application code; under oversubscription it is 45$\times$--58$\times$ faster than
+default UVM and 27$\times$--35$\times$ faster than hand-written KV-cache offloading.
 
-We address each problem with a targeted system.
-\EMTbrand{} gives Linux an extensible, architecture-neutral interface for memory translation,
-enabling OS support for radically different page table structures without modifying
-the kernel for each new design.
-Using \EMTbrand{}, we port ECPT and FPT---two recent hardware schemes for fast translation---to
-Linux, reveal OS-level challenges invisible to hardware-only evaluation,
-and optimize their designs from the OS perspective.
-\vFreebrand{} redesigns the Linux IOMMU invalidation protocol around two mechanisms---one-for-many
-invalidations and deferred page freeing---that amortize VM exit costs across concurrent unmap
-requests while preserving strict security guarantees.
-\vFreebrand{} achieves performance within 1--8\% of an unprotected system,
-a 74--147$\times$ improvement over the state of the art.
-\pytorchUVMbrand{} integrates a UVM-aware caching allocator and discard-based eviction
-directly into PyTorch, enabling practical GPU memory oversubscription for LLM inference
-without modifying application code.
-Under oversubscription, \pytorchUVMbrand{} is 45$\times$--58$\times$ faster than default UVM
-and 27$\times$--35$\times$ faster than hand-written KV-cache offloading.
+Across all three, a common structure emerges.
+Each begins with a mature, widely deployed abstraction---Linux's radix-tree paging, the
+Linux IOMMU subsystem, and CUDA Unified Virtual Memory---that is correct and general but
+was designed under assumptions that no longer hold at scale.
+Closing the resulting semantic gap does not require replacing the existing stack: in each
+case the fix is surgical, identifying the specific invariant that the legacy design
+enforces unnecessarily and relaxing it while retaining the surrounding system.
+Realizing this required cross-layer evaluation, because each bottleneck is created not by
+hardware but by a software layer---the OS overhead that simulation models assume constant,
+the IOMMU datapath that serializes VM exits triggered by invalidation, 
+and lack of framework support for UVM.
 
-Together, these systems validate the thesis:
-bottlenecks in modern memory management arise not from fundamental hardware limitations
-but from software abstractions designed without awareness of the hardware and workloads
-they now serve.
-Targeted changes to the system software layer---without hardware modification---are
-sufficient to eliminate them.
-
-\subsection{Unifying Lessons}
-
-Across all three systems, a common structure emerges.
-Each begins with a mature, widely deployed abstraction:
-Linux's radix-tree paging, the Linux IOMMU subsystem, and CUDA Unified Virtual Memory.
-Each abstraction is correct and general, but was designed under assumptions
-that no longer hold at scale:
-a single translation architecture, low per-operation overhead in virtualized environments,
-and a driver-level view of workload access patterns.
-The result in each case is a semantic gap between what the abstraction exposes
-and what hardware and workloads actually need.
-
-The key insight is that closing this gap does not require wholesale replacement
-of the existing stack.
-\EMTbrand{} retains Linux's page fault handling, huge page management, and
-user-space memory interfaces while adding a thin extensibility layer beneath them.
-\vFreebrand{} retains the IOMMU hardware protocol while reorganizing the software
-path that serializes invalidation requests.
-\pytorchUVMbrand{} retains CUDA UVM's transparency guarantee while adding
-allocator-level and eviction-level awareness of framework caching behavior.
-In each case, the fix is surgical: identify the specific invariant that the
-legacy design enforces unnecessarily, relax it in a principled way,
-and recover the lost performance or extensibility.
-
-A second lesson is the importance of cross-layer evaluation.
-Hardware architecture proposals for new translation schemes rely on simulation
-models that assume OS overhead is constant across designs---an assumption \EMTbrand{}
-shows to be false.
-IOMMU hardware supports strict invalidation, but its cost is determined entirely
-by how the hypervisor software serializes the resulting VM exits,
-a detail \vFreebrand{} exposes.
-UVM page fault latency is dominated not by hardware migration cost but by the
-interaction between the driver's eviction policy and the framework's caching allocator,
-the insight that motivates \pytorchUVMbrand{}.
-Effective system design requires evaluating the full hardware--software stack,
-not just the hardware layer in isolation.
-
-% \subsection{Future Directions}
-
-% The three systems in this dissertation open several directions for future work.
-
-% \subsubsection{Extensible Translation for Heterogeneous Devices}
-% \EMTbrand{} focuses on CPU memory translation, but the same extensibility problem
-% exists for other translation-capable devices:
-% IOMMUs, NPU memory management units, and near-memory processing units
-% each use distinct page table organizations.
-% Extending \EMTbrand{}'s architecture-neutral interface to cover non-CPU devices
-% would allow a unified OS framework to manage memory across the full heterogeneous stack.
-% The increasing diversity of interconnected memory devices---CXL-attached memory,
-% disaggregated memory pools---makes OS extensibility for translation
-% an increasingly pressing requirement.
-
-% \subsubsection{Application-Aware Eviction for UVM}
-% As demonstrated in our evaluation, thrashing remains a primary bottleneck
-% for \pytorchUVMbrand{} under heavy oversubscription.
-% The root cause is a semantic gap between the UVM driver's eviction policy and
-% the framework's caching allocator: the driver evicts pages based on hardware-level
-% access history, which frequently conflicts with logical reuse patterns visible only
-% at the framework level.
-% Closing this gap requires eviction policies informed by application-level data lifetimes.
-% Existing offloading frameworks already compute detailed schedules for when data
-% will be needed next; passing these schedules down as hints to the UVM driver
-% would allow the driver to prefetch and evict more effectively
-% while retaining UVM's transparency guarantee.
-
-% \subsubsection{Multi-GPU and Cross-Node UVM}
-% \pytorchUVMbrand{} is currently validated on single-GPU configurations.
-% Production AI workloads require multi-GPU and cross-node deployments,
-% where UVM semantics become more complex:
-% every GPU can access a shared managed address space,
-% and each GPU's caching allocator must reason about data resident on other devices.
-% Extending \pytorchUVMbrand{} to multi-GPU systems requires coordinating
-% eviction decisions across allocators and understanding how NVLink and CXL
-% interconnect topologies affect migration cost.
-
-% \subsubsection{Hardware--Software Co-Design for IO Memory Protection}
-% \vFreebrand{} achieves near-native performance for strict vIOMMU protection
-% through software reorganization alone.
-% Future hardware could reduce costs further by exposing explicit batching
-% interfaces for IOTLB invalidation, eliminating the need for the one-for-many
-% aggregation that \vFreebrand{} implements in software.
-% Similarly, hardware support for deferred page table reclaim---analogous
-% to RCU in the CPU memory subsystem---could reduce the dedicated-core overhead
-% that \vFreebrand{} currently requires.
-% These directions represent opportunities for hardware--software co-design
-% guided by the bottlenecks identified in this work.
-
-\subsection{Closing Remarks}
-
-Modern computing systems are hardware-rich and software-constrained.
-The hardware advances of the last decade---terabyte DRAM, hundred-gigabit
-device interconnects, and high-bandwidth GPU memory---are available in today's
-servers, but legacy system software layers prevent workloads from exploiting them fully.
-This dissertation demonstrates that the constraint is not fundamental:
-the bottleneck is the abstraction layer, not the hardware,
-and targeted changes to system software suffice to close the gap.
-
-We hope the systems presented in this dissertation---\EMTbrand{}, \vFreebrand{},
-and \pytorchUVMbrand{}---serve both as practical tools and as evidence for a
-broader research agenda: that hardware- and workload-aware system software redesign
-is a high-leverage approach to unlocking the full potential of modern memory hardware.
+Today's computing stacks pair increasingly heterogeneous hardware with increasingly
+demanding workloads, and memory management systems must evolve to bridge them---serving
+the needs of modern workloads while fully exploiting the capabilities of modern hardware.
+This dissertation demonstrates that redesigning the memory management systems to be hardware- and workload-aware is a high-leverage path
+to unlocking the full potential of modern hardware.

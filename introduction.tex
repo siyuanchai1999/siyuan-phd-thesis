@@ -47,15 +47,13 @@ Their core abstractions---the radix-tree page table, the synchronous IOTLB inval
 the application-opaque unified virtual memory---cannot keep up with today's scale and speed,
 and have become the bottleneck for the workloads that depend on them.
 
-This dissertation argues that existing memory management systems create significant
-bottlenecks.
-These bottlenecks manifest in three ways:
-\textbf{performance}, when management overhead consumes the headroom that new
-hardware provides;
-\textbf{security}, when production systems are forced to disable expensive
-protection mechanisms to remain usable;
-and \textbf{extensibility}, when rigid, hardwired designs prevent the deployment
-of new hardware ideas, slowing the broader research and development cycle.
+This dissertation argues that existing memory management systems have become a
+critical \textbf{performance} bottleneck, and that the usual ways of relieving that
+bottleneck force an unacceptable compromise.
+To stay usable, production systems either sacrifice \textbf{security}---disabling
+expensive protection mechanisms---or forfeit \textbf{extensibility}---hardwiring rigid
+designs that block the deployment of new hardware ideas and slow the broader research
+and development cycle.
 Across the stack---from CPU virtual memory, to I/O memory protection, to GPU
 device memory---the same pattern recurs:
 as hardware grows faster and more heterogeneous and workloads grow more demanding,
@@ -70,7 +68,7 @@ I/O memory protection in the OS kernel (specifically, the guest kernel's IOMMU
 subsystem, in concert with the host kernel and hypervisor),
 and the GPU memory management system.
 In each setting, we identify the specific invariant that the legacy abstraction
-enforces unnecessarily, redesign the memory management system around that finding,
+enforces unnecessarily, redesign the memory management system around that insight,
 and show that targeted, hardware- and workload-aware changes are sufficient to
 eliminate the bottlenecks---without refactoring the applications or abandoning the
 existing computing stacks.
@@ -114,8 +112,8 @@ existing computing stacks.
     response has been for each AI framework to implement its own complex,
     application-specific offloading logic---hand-written code paths for
     KV-cache eviction, parameter swapping, and activation rematerialization,
-    re-implemented across PyTorch~\cite{pytorch}, vLLM~\cite{vllm}, DeepSpeed~\cite{deepspeed}.
-    The CUDA runtime offers a transparent, driver-level alternative---Unified
+    re-implemented across PyTorch~\cite{pytorch}, vLLM~\cite{vllm}, and DeepSpeed~\cite{deepspeed}.
+    The CUDA driver offers a transparent alternative---Unified
     Virtual Memory (UVM)---but it is widely considered impractical for
     production.
     Our measurements show that UVM is over 50$\times$ slower than PyTorch's
@@ -169,7 +167,7 @@ and 4) has negligible overhead over hardwired implementations.
 We port Linux's memory management onto EMT and show that
 EMT enables extensibility without sacrificing performance.
 We use EMT to implement OS support for ECPT and FPT, two recent experimental
-translation schemes for fast translation;
+schemes for fast translation;
 EMT enables us to understand the OS perspective of these architectures
 and further optimize their designs.
 
@@ -187,21 +185,21 @@ A VM exit costs 10--20\,$\mu$s; a bare-metal IOTLB invalidation costs 200--300\,
 The result is 83--95\% application throughput degradation---a penalty so severe
 that production deployments universally disable strict protection.
 
-We present {\vFreebrand} a simple modification to existing IO memory protection
-mechanisms that makes strict IO memory protection feasible in virtualized environments.
+We present {\vFreebrand}, a simple modification to existing I/O memory protection
+mechanisms that makes strict I/O memory protection feasible in virtualized environments.
 The key insight in {\vFreebrand} is that, in virtualized environments,
-it is possible to reduce the overheads of strict IO memory protection
+it is possible to reduce the overheads of strict I/O memory protection
 to a bare minimum by \textit{increasing} the cost of address translation.
 Intuitively, this is because each VM exit has much higher cost
 than the worst-case translation cost.
-{\vFreebrand} design incorporates two ideas---\textit{one-for-many invalidations}
+The {\vFreebrand} design incorporates two ideas---\textit{one-for-many invalidations}
 and \textit{deferred free page}---that, when put together, result in higher
 address translation cost but significantly reduce the number of VM exits
-(and hence, IO memory protection overheads) while maintaining strict IO memory protection.
+(and hence, I/O memory protection overheads) while maintaining strict I/O memory protection.
 We implement {\vFreebrand} on Linux, and evaluate it across multiple real-world applications.
 Our evaluation suggests that, at the cost of one dedicated core,
 {\vFreebrand} consistently achieves performance within 1--8$\%$ of
-the unprotected system---74--147$\times$ higher than state-of-the-art IO memory protection mechanisms.
+the unprotected system---74--147$\times$ higher than state-of-the-art I/O memory protection mechanisms.
 
 \paragraph{PyTorch-UVM: Practical Unified Virtual Memory for Large Language Model Inference.}
 The third problem is GPU memory management for LLM inference.
@@ -257,16 +255,16 @@ This dissertation makes the following contributions:
 
     \item \textbf{A unifying perspective.} 
         Together, these systems demonstrate that making system software layers hardware-
-        and workload-aware---through targeted changes---eliminates bottlenecks in
-        performance, security, and extensibility.
+        and workload-aware---through targeted changes---eliminates performance bottlenecks
+        without compromising security or extensibility.
 \end{itemize}
 
 \subsection{Dissertation Roadmap}
 
 The remainder of this dissertation is organized as follows.
-\ref{chp:emt} presents EMT and its evaluation on new translation architectures.
-\ref{chp:viommu} presents the redesigned vIOMMU mechanism and its evaluation
+Chapter~\ref{chp:emt} presents EMT and its evaluation on new translation architectures.
+Chapter~\ref{chp:viommu} presents the redesigned vIOMMU mechanism and its evaluation
 on 400\,Gbps networking workloads.
-\ref{chp:uvmtorch} presents Pytorch-UVM and its evaluation on LLM inference across
+Chapter~\ref{chp:uvmtorch} presents PyTorch-UVM and its evaluation on LLM inference across
 PCIe-based and NVLink-C2C hardware.
-\ref{chp:conclusion} concludes and discusses future directions.
+Chapter~\ref{chp:conclusion} concludes the dissertation.

@@ -38,7 +38,7 @@
 % If you need chapter-level references, instead of `\section`, use the
 % `sectionwithreferences` environment.
 \usepackage[hidelinks,pdfusetitle]{hyperref}
-\usepackage[backend=biber,style=ieee,defernumbers=true]{biblatex}
+\usepackage[backend=biber,style=ieee,defernumbers=true,maxbibnames=99,minbibnames=99]{biblatex}
 \usepackage[bottom]{footmisc}
 
 % At time of writing, chemistry packages are not compatible with accessibility
@@ -60,8 +60,14 @@
 % The mismatch comes from paper-derived environments (packed_itemize, custom
 % \para heading) interacting with PDF/UA-2 paragraph tracking. The visual
 % output and document structure are correct; only the para-tag count is off.
+% The same paper-derived environments leave the structure stack slightly
+% unbalanced at \end{document}, which surfaces as a downstream
+% struct-faulty-nesting error once the para-hook mismatch above is tolerated.
+% tagpdf auto-closes the open structures; demote to a warning so the build
+% completes. Triggered/shifted by any repagination (e.g. figure/code sizing).
 \ExplSyntaxOn
 \msg_redirect_name:nnn { tag } { para-hook-count-wrong } { warning }
+\msg_redirect_name:nnn { tag } { struct-faulty-nesting } { warning }
 \ExplSyntaxOff
 
 % Raggedright is recommended for accessibility
@@ -156,7 +162,7 @@ interface for memory translation, enabling OS support for diverse hardware
 schemes---hash-table-based, flat, and hybrid---without modifying the kernel
 for each.
 \emph{Virtually Free} redesigns the Linux IOMMU invalidation protocol around
-one-for-many invalidations and deferred page freeing, achieving performance
+one-for-many invalidations and deferred free page, achieving performance
 within 1--8\% of an unprotected system---74--147$\times$ better than the state
 of the art---while preserving strict security guarantees.
 \emph{PyTorch-UVM} integrates a UVM-aware caching allocator and framework-guided
@@ -206,7 +212,7 @@ We had so many interesting discussions on the security and performance of vFree.
 Rachit was always encouraging and supportive of our ideas and plans,
 and he helped us prioritize tasks during the deadline crunch.
 
-Finally, I wish to give special thanks to my undergraduate advisor,
+I wish to give special thanks to my undergraduate advisor,
 Professor Peter Dinda from Northwestern University.
 He introduced me to the field of computer systems and inspired me to pursue a PhD.
 My undergraduate research experience with him was hands-on, and full of fun.
