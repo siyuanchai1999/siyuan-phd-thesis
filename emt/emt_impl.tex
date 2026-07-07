@@ -97,7 +97,7 @@ Hence, EMT supports all virtual memory features of vanilla Linux and
 
 \begin{figure}[tbp]
 	\centering
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\normalsize,escapeinside=@@]{C}
 void walk_tobj_range(start, end, walk) {
   struct tlock lock; struct tobj_iter iter;
   struct tobj tobj; ulong size; 
@@ -117,6 +117,12 @@ void walk_tobj_range(start, end, walk) {
   addr_range_put_lock(&lock);
 } /* mm/pagewalk.c */
 \end{minted}
+
+\begin{tikzpicture}[remember picture,overlay,>=stealth']
+\codenote{emtlock}{1ex}{2.6}{0.8}{right,yshift=1mm}{Customizable\\split PT lock.}
+\codenote{emtiter}{0ex}{0.9}{-1.65}{right}{Customizable iterator can be\\implemented as \texttt{++} for performance.}
+\codenote{emtptr}{0ex}{1.8}{-1.65}{right,yshift=-2.5mm}{EMT also allows in-place operations\\via low-level abstractions.}
+\end{tikzpicture}
 
 \caption{\bf Rewriting code in Figure~\ref{emt:fig:need:linux-performance-opt} with EMT.}
 \label{emt:fig:interface-compare}

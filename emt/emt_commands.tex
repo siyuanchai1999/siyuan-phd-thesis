@@ -38,10 +38,9 @@
 
 % Section header spacing (titlesec \titleformat args removed; uofithesis handles formatting)
 
-% Simplified: colorbox/tikzmark incompatible with PDF accessibility tagging.
 % G{} makes the 3rd arg optional (some callers pass 2 args, some pass 3).
-\NewDocumentCommand{\codehl}{m m G{}}{\textbf{#2#3}}
-\newcommand{\codenote}[6]{}
+\NewDocumentCommand{\codehl}{m m G{}}{{\setlength{\fboxsep}{1pt}\textbf{\colorbox{hlgray}{#2\tikzmark{#1}#3}}}}
+\newcommand{\codenote}[6]{\draw[-,overlay,thin] (pic cs:#1) +(0,#2) |- +(#3,#4) node[rectangle,draw,#5,thin,fill=bkgray,inner sep=2pt] {\footnotesize\makecell[l]{#6}};}
 \newcommand{\codetype}[1]{\textbf{\color{mintedtype}#1}}
 \newcommand{\codefunc}[1]{\color{mintedfunc}#1}
 \newcommand{\coderet}[1]{\textbf{\color{mintedret}#1}}

@@ -4,7 +4,7 @@
 \begin{figure}[H]
 	\centering
 \begin{singlespace}
-\begin{minted}[xleftmargin=17.5pt,linenos,breaklines,fontsize=\small,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,breaklines,fontsize=\normalsize,escapeinside=@@]{C}
 void vunmap_pmd_range(pmd, addr, end) {
   @\codetype{pmd\_t}@ *pmd = @\codehl{pmdoff}{pmd\_off}{set(pud}@, addr);
   do { ...
@@ -22,6 +22,16 @@ void vunmap_pmd_range(pmd, addr, end) {
 } /* mm/vmalloc.c */
 \end{minted}
 \end{singlespace}
+
+\begin{tikzpicture}[remember picture,overlay,>=stealth']
+	\codenote{pmdoff}{0ex}{5.0}{0.3}{right}{Find a 2MB entry (PMD) from\\the addr. of a 1GB entry (PUD).}
+	\codenote{pmdnone}{0ex}{6.2}{-0.3}{right,yshift=-3mm}{Overloaded semantics:\\
+	(1) The entry does not point to\\\hspace{1.4em}a 2MB huge page;\\
+	(2) The entry is not a directory;\\
+	(3) No entries of 4KB pages in\\\hspace{1.4em}the 2MB address range.}
+	\codenote{pmdpp}{0ex}{2.3}{-1.3}{right}{The iterator assumes the spatial locality of entries.}
+\end{tikzpicture}
+
 \caption{\bf Examples of Linux memory management code that is hardwired to
 radix-tree based translation.} 
 % \jyk{As a reviewer, I am curious how this code example
@@ -154,7 +164,7 @@ struct file_operations {
 \begin{figure}[H]
 	\centering
 \begin{singlespace}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\normalsize,escapeinside=@@]{C}
 void walk_pte_range(pmd, addr, end, walk) {
   @\codetype{spinlock\_t}@ *ptl;
   @\codetype{pte\_t}@ *pte = @\codehl{linuxlock}{pte\_offset}{\_map\_lock}@(mm, pmd, addr, &ptl);
@@ -170,6 +180,12 @@ void walk_pte_range(pmd, addr, end, walk) {
 } /* mm/pagewalk.c */
 \end{minted}
 \end{singlespace}
+
+\begin{tikzpicture}[remember picture,overlay,>=stealth']
+	\codenote{linuxlock}{1ex}{4.0}{0.85}{right,yshift=2mm}{Lock 2MB address range only\\once for batched operations.}
+	\codenote{linuxpte}{0ex}{1.05}{-0.6}{right,yshift=-2.5mm}{A custom function uses entry pointers to\\perform in-place attribute updates.}
+	\codenote{linuxiter}{0ex}{0.2}{-0.8}{right}{Exploit page table entry adjacency to reduce page walk overhead.}
+\end{tikzpicture}
 
 \caption{\bf Hardware-specific optimizations in Linux.}
 \label{emt:fig:need:linux-performance-opt}
