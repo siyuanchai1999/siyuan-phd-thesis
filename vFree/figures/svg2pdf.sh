@@ -1,0 +1,1 @@
+python ./svg2pdf.py inkscape
