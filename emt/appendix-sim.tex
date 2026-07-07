@@ -191,7 +191,7 @@ by making the kernel developers focus on MMU driver implementation.
 \centering
 % % return addr_range_void(tentry, va, size) &&
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 bool thp_eligible(tobj, pg_size, vma) {
   if (pg_size == PMD_SIZE) 
     return pmd_none(*tobj->pmd) &&
@@ -204,7 +204,7 @@ bool thp_eligible(tobj, pg_size, vma) {
 \caption{x86-64 MMU driver}
 \end{subfigure}
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 bool thp_eligible(tobj, pg_size, vma) {
   if (pg_size == PMD_SIZE){ 
     return __transparent_hugepage_enabled(vma) &&

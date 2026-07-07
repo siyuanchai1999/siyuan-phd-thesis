@@ -191,7 +191,7 @@ As a result, all concurrent vCPUs serialize on
 
 \begin{figure}[H]
 	\centering
-\includegraphics[width=0.6\columnwidth]{figures/siyuan_invalidation_breakdown.pdf}
+\includegraphics[width=0.7\columnwidth]{figures/siyuan_invalidation_breakdown.pdf}
 % \Description{Lock Contention Time Balloons with increasing core count}
 \caption{\small {\bf Breakdown of IO memory protection overheads.} IR-PREP contributes minimally, independent of number of cores. For fewer than $8$ cores, IR-SUB cost dominates; for $8$ and more cores, lock contention overheads dominate. Moreover, with increasing number of cores, lock contention time increases superlinearly while the IR-SUB cost remains nearly constant.
 }

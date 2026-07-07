@@ -23,7 +23,7 @@ In essence, EMT is an abstraction to existing page table functions
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 struct vm_fault { unsigned long address;
   pte_t *pte; pmd_t *pmd; pud_t *pud; pgd_t *pgd; ...
 };
@@ -49,7 +49,7 @@ static vm_fault_t __handle_mm_fault(...) {
 \vspace{-7.5pt}
 \end{subfigure}
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 struct tobj { unsigned long vaddr;
   pte_t *pte; pmd_t *pmd; pud_t *pud; pgd_t *pgd; ...
 };
@@ -107,7 +107,7 @@ static vm_fault_t __handle_mm_fault(...) {
 \centering
 \begin{subfigure}[b]{0.23\textwidth}
 \centering
-\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 __handle_mm_fault:
   push rbp
 @\diffamv{  mov  rax, rsi}@
@@ -185,7 +185,7 @@ __handle_mm_fault:
 \end{subfigure}
 \begin{subfigure}[b]{0.23\textwidth}
 \centering
-\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 __handle_mm_fault:
   push rbp
 @\diffoth{}@
@@ -328,7 +328,7 @@ In our implementation,
 \begin{comment}
 
 \begin{figure}[H]
-\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 // In MMU driver implementation file
 int x86_tdb_find(...) {
   // ...

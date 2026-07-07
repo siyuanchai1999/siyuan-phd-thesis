@@ -97,7 +97,7 @@ Hence, EMT supports all virtual memory features of vanilla Linux and
 
 \begin{figure}[tbp]
 	\centering
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 void walk_tobj_range(start, end, walk) {
   struct tlock lock; struct tobj_iter iter;
   struct tobj tobj; ulong size; 
@@ -183,7 +183,7 @@ void walk_tobj_range(start, end, walk) {
 \begin{figure}[H]
 	\centering
 % Adapted from https://github.com/freebsd/freebsd-src/blob/main/sys/compat/linuxkpi/common/src/linux_page.c#L246
-\begin{minted}[xleftmargin=20pt,tabsize=4,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+\begin{minted}[xleftmargin=20pt,tabsize=4,linenos,mathescape,breaklines,fontsize=\small]{C}
 
 // declaration in EMT interface
 pte_t * pte_iter_next(i);
@@ -269,7 +269,7 @@ until testing the implementation of driver.
 
 % Adapted from https://github.com/freebsd/freebsd-src/blob/main/sys/compat/linuxkpi/common/src/linux_page.c#L246
 
-\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 // 1 walk for Radix, ECPT unsupported
 // walking higher level page table entries
 ...
@@ -352,7 +352,7 @@ It won't be possible to handle both case without modifying PF handler's
 
 % Adapted from https://github.com/freebsd/freebsd-src/blob/main/sys/compat/linuxkpi/common/src/linux_page.c#L246
 
-\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 
 // default implementation
 static inline int aspace_placement(mm, addr, vma ...)
@@ -433,7 +433,7 @@ Other range operation routines can rely on this function to implement their own 
 
 % Adapted from https://github.com/freebsd/freebsd-src/blob/main/sys/compat/linuxkpi/common/src/linux_page.c#L246
 
-\begin{minted}[xleftmargin=20pt,tabsize=4,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+\begin{minted}[xleftmargin=20pt,tabsize=4,linenos,mathescape,breaklines,fontsize=\small]{C}
 
 void walk_pte_range(addr, end, pmd, ...) {
 	spinlock_t *ptl;
@@ -676,7 +676,7 @@ It looks at the translation object and the corresponding page size based on the 
 
 \begin{figure}[tbp]
 	\centering
-	\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+	\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 static vm_fault_t __handle_mm_fault(vma, vaddr, flags)
 { ...
   struct tobj tobj;

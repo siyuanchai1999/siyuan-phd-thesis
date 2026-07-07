@@ -305,7 +305,7 @@ Basic functions free developers from sophisticated optimizations
 %	should always return an effective translation object, as the outcome of the translation.
 \begin{figure}[H]
 	\centering
-\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 //// Translation Object
 // Read the attribute of an object based on the attribute key
 @\codefunc{tobj\_read\_attr}@(tobj, attr_key) @\coderet{->}@ (error, attr_value)
@@ -594,7 +594,7 @@ The routines in this group correspond to
 
 \begin{figure}[H]
 	\centering
-\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=0pt,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 //// Translation Object Iterator
 // Return the current translation object and advance the iterator
 @\codefunc{tobj\_iter\_next}@(iter) @\coderet{->}@ (error, tobj)
@@ -663,7 +663,7 @@ We discuss the iterator group as an example.
 \begin{figure}[tbp]
 \centering
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 { ...
   int ret = tdb_find_tobj(iter->tdb, iter->va, tobj);
@@ -677,7 +677,7 @@ int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 \label{emt:code:iternext-gen}
 \end{subfigure}
 \begin{subfigure}[b]{.5\textwidth}
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 int tobj_iter_next(struct tobj_iter *iter, struct tobj *tobj)
 { ...
   // handling the most common case of iterating in a 2MB range
@@ -929,7 +929,7 @@ The MMU drivers can customize the implementation with fine-grained locks.
 % \centering
 % % return addr_range_void(tentry, va, size) &&
 % \begin{subfigure}[b]{.5\textwidth}
-% \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+% \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 % bool thp_eligible(tentry, va, size, vma) {
 %   return aspace_void(tentry, va, size) &&
 %     __transparent_hugepage_enabled(vma);
@@ -941,7 +941,7 @@ The MMU drivers can customize the implementation with fine-grained locks.
 % \vspace{5pt}
 % \end{subfigure}
 % \begin{subfigure}[b]{.5\textwidth}
-% \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize]{C}
+% \begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 % bool thp_eligible(tentry, va, size, vma) {
 %   return __transparent_hugepage_enabled(vma) &&
 %     aspace_void(tentry, va, size);

@@ -3,7 +3,7 @@
 
 \begin{figure}[H]
 	\centering
-\begin{minted}[xleftmargin=17.5pt,linenos,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,breaklines,fontsize=\small,escapeinside=@@]{C}
 void vunmap_pmd_range(pmd, addr, end) {
   @\codetype{pmd\_t}@ *pmd = @\codehl{pmdoff}{pmd\_off}{set(pud}@, addr);
   do { ...
@@ -131,7 +131,7 @@ In Figure~\ref{emt:fig:need:linux-no-interface}, \texttt{\small pmd\_none\_or\_c
 \begin{figure}[H]
 	\centering
 
-	\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+	\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 struct file_operations {
   ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
   ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
@@ -151,7 +151,7 @@ struct file_operations {
 
 \begin{figure}[H]
 	\centering
-\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\scriptsize,escapeinside=@@]{C}
+\begin{minted}[xleftmargin=17.5pt,linenos,mathescape,breaklines,fontsize=\small,escapeinside=@@]{C}
 void walk_pte_range(pmd, addr, end, walk) {
   @\codetype{spinlock\_t}@ *ptl;
   @\codetype{pte\_t}@ *pte = @\codehl{linuxlock}{pte\_offset}{\_map\_lock}@(mm, pmd, addr, &ptl);
@@ -261,7 +261,7 @@ As optimizations of memory management are critical to Linux performance---27.8\%
 \begin{comment}
 \begin{figure}[H]
 	\centering
-\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\footnotesize]{C}
+\begin{minted}[xleftmargin=20pt,linenos,mathescape,breaklines,fontsize=\small]{C}
 int pmap_enter(pmap_t pmap, vm_offset_t va, vm_page_t m, vm_prot_t prot, u_int flags, int8_t psind);
 vm_paddr_t pmap_extract(pmap_t pmap, vm_offset_t va);
 void pmap_copy_page(vm_page_t, vm_page_t);
